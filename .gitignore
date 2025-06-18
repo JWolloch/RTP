@@ -1,13 +1,23 @@
-# Ignore everything
-*
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
 
-# Allow the .gitignore file
-!.gitignore
+# Jupyter checkpoints
+.ipynb_checkpoints/
 
-# Allow the README.md file
-!README.md
+# Logs and temp files
+*.log
+*.tmp
 
-# Allow the src folder
-!src/
-!src/**/
-!src/**/*.py
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE and editor files
+.vscode/
+.idea/
+
+# Virtual environments (if local)
+.venv/
+env/
+venv/
