@@ -1,0 +1,13 @@
+# Ignore everything
+*
+
+# Allow the .gitignore file
+!.gitignore
+
+# Allow the README.md file
+!README.md
+
+# Allow the src folder
+!src/
+!src/**/
+!src/**/*.py
