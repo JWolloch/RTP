@@ -26,7 +26,7 @@ class Preprocessor:
         logger.test("Projection bounds checked successfully\n")
     
     def print_min_max_projections(self):
-        logger.test("Printing min and max projections...")
+        logger.preprocess("Printing min and max projections...")
         table = [
             ["min{phi_hat}", np.min(self._phi_hat).round(3)],
             ["max{phi_hat}", np.max(self._phi_hat).round(3)],
@@ -47,7 +47,7 @@ class Preprocessor:
         print()
     
     def print_sample_projections(self):
-        logger.test("Printing projections on a random voxel...")
+        logger.preprocess("Printing projections on a random voxel...")
         v = np.random.randint(0, self._phi_hat.shape[0])
         table = [
             [f"phi_hat[{v}]", self._phi_hat[v].round(3)],

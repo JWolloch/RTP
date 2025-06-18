@@ -4,8 +4,11 @@ from scipy.sparse.csgraph import shortest_path
 import numpy as np
 from config import GammaParameters
 import logging
+
+logger = logging.getLogger(__name__)
+
 def load_liver_data_mat(filepath: str) -> tuple[csc_matrix, np.ndarray, csc_matrix, np.ndarray, np.ndarray, np.ndarray]:
-    logging.info("Loading liver data from %s", filepath)
+    logger.preprocess("Loading liver data from %s", filepath)
     mat_data = loadmat(filepath, squeeze_me=True)  # squeeze to remove singleton dimensions
     
     def maybe_sparse(x):
@@ -21,7 +24,7 @@ def load_liver_data_mat(filepath: str) -> tuple[csc_matrix, np.ndarray, csc_matr
     H_1_voxels = V[1].astype(int) - 1
     H_2_voxels = V[2].astype(int) - 1
 
-    logging.info("Liver data loaded successfully\n")
+    logger.preprocess("Liver data loaded successfully\n")
 
     return D, phi_hat, voxel_positions, tumor_voxels, H_1_voxels, H_2_voxels
 
@@ -30,9 +33,9 @@ def compute_voxel_distance_matrix(adj_matrix: csc_matrix) -> np.ndarray:
     Computes the (unweighted) shortest path distance matrix
     for the graph corresponding to the adjacency matrix, using SciPy's csgraph utilities.
     """
-    logging.info("Computing voxel distance matrix...")
+    logger.preprocess("Computing voxel distance matrix...")
     distances = shortest_path(csgraph=adj_matrix, directed=False, unweighted=True)
-    logging.info("Voxel distance matrix computed successfully\n")
+    logger.preprocess("Voxel distance matrix computed successfully\n")
     return distances.astype(int)
 
 def gamma(x: float, parameters: GammaParameters) -> float:
@@ -56,7 +59,7 @@ def apply_gamma_to_matrix(distances: np.ndarray, parameters: GammaParameters) ->
     Returns:
         np.ndarray: Matrix with gamma(x) applied elementwise
     """
-    logging.info("Applying gamma function to distance matrix...")
+    logger.preprocess("Applying gamma function to distance matrix...")
     x = np.maximum(distances, 1e-6)  # Avoid log(0)
 
     result = np.zeros_like(x, dtype=np.float64)
@@ -83,43 +86,43 @@ def apply_gamma_to_matrix(distances: np.ndarray, parameters: GammaParameters) ->
     result[above_range] = gamma_max
 
     # For x < 1, result stays at 0
-    logging.info("Gamma function applied to distance matrix successfully\n")
+    logger.preprocess("Gamma function applied to distance matrix successfully\n")
     return result
 
 def compute_phi_underbar_0(phi_hat: np.ndarray, delta: float) -> np.ndarray:
-    logging.info("Computing phi_underbar_0...")
+    logger.preprocess("Computing phi_underbar_0...")
     phi_underbar_0 = np.maximum(phi_hat - delta, 0)
-    logging.info("phi_underbar_0 computed successfully\n")
+    logger.preprocess("phi_underbar_0 computed successfully\n")
     return phi_underbar_0
 
 def compute_phi_bar_0(phi_hat: np.ndarray, delta: float) -> np.ndarray:
-    logging.info("Computing phi_bar_0...")
+    logger.preprocess("Computing phi_bar_0...")
     phi_bar_0 = np.minimum(phi_hat + delta, 1)
-    logging.info("phi_bar_0 computed successfully\n")
+    logger.preprocess("phi_bar_0 computed successfully\n")
     return phi_bar_0
 
 def compute_phi_underbar_1(phi_underbar_0: np.ndarray, gamma_matrix: np.ndarray) -> np.ndarray:
-    logging.info("Computing phi_underbar_1...")
+    logger.preprocess("Computing phi_underbar_1...")
     phi_underbar_1 = np.max(phi_underbar_0[:, None] - gamma_matrix, axis=0)
-    logging.info("phi_underbar_1 computed successfully\n")
+    logger.preprocess("phi_underbar_1 computed successfully\n")
     return phi_underbar_1
 
 def compute_phi_bar_1(phi_bar_0: np.ndarray, gamma_matrix: np.ndarray) -> np.ndarray:
-    logging.info("Computing phi_bar_1...")
+    logger.preprocess("Computing phi_bar_1...")
     phi_bar_1 = np.min(phi_bar_0[:, None] + gamma_matrix, axis=0)
-    logging.info("phi_bar_1 computed successfully\n")
+    logger.preprocess("phi_bar_1 computed successfully\n")
     return phi_bar_1
 
 def compute_phi_underbar_2(phi_underbar_1: np.ndarray, sigma: float) -> np.ndarray:
-    logging.info("Computing phi_underbar_2...")
+    logger.preprocess("Computing phi_underbar_2...")
     phi_underbar_2 = np.maximum(phi_underbar_1 - sigma, 0)
-    logging.info("phi_underbar_2 computed successfully\n")
+    logger.preprocess("phi_underbar_2 computed successfully\n")
     return phi_underbar_2
 
 def compute_phi_bar_2(phi_bar_1: np.ndarray, sigma: float) -> np.ndarray:
-    logging.info("Computing phi_bar_2...")
+    logger.preprocess("Computing phi_bar_2...")
     phi_bar_2 = np.minimum(phi_bar_1 + sigma, 1)
-    logging.info("phi_bar_2 computed successfully\n")
+    logger.preprocess("phi_bar_2 computed successfully\n")
     return phi_bar_2
 
 
