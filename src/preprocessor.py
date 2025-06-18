@@ -3,6 +3,7 @@ import numpy as np
 from config import GammaParameters, ProjectionParameters
 import logging
 from tabulate import tabulate
+from scipy.sparse import csc_matrix
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,8 @@ class Preprocessor:
         self._phi_bar_1 = utils.compute_phi_bar_1(self._phi_bar_0, self._gamma_matrix)
         self._phi_underbar_2 = utils.compute_phi_underbar_2(self._phi_underbar_1, ProjectionParameters.sigma)
         self._phi_bar_2 = utils.compute_phi_bar_2(self._phi_bar_1, ProjectionParameters.sigma)
+        self._M_3c1_1, self._M_3c1_2 = utils.compute_constraint_3c_1_coefficient_matrix(self._phi_bar_1, self._phi_underbar_1, self._phi_bar_2, self._phi_underbar_2, self._gamma_matrix)
+        self._M_3c2_1, self._M_3c2_2 = utils.compute_constraint_3c_2_coefficient_matrix(self._phi_bar_1, self._phi_underbar_1, self._phi_bar_2, self._phi_underbar_2, self._gamma_matrix)
 
     def check_phi_bounds(self):
         logger.test("Checking projection bounds...")
@@ -62,57 +65,77 @@ class Preprocessor:
         print()
     
     @property
-    def D(self):
+    def D(self) -> csc_matrix:
         return self._D
     
     @property
-    def phi_hat(self):
+    def phi_hat(self) -> np.ndarray:
         return self._phi_hat
     
     @property   
-    def voxel_positions(self):
+    def voxel_positions(self) -> csc_matrix:
         return self._voxel_positions
     
     @property
-    def tumor_voxels(self):
+    def tumor_voxels(self) -> np.ndarray:
         return self._tumor_voxels
     
     @property
-    def H_1_voxels(self):
+    def H_1_voxels(self) -> np.ndarray:
         return self._H_1_voxels
     
     @property
-    def H_2_voxels(self):
+    def H_2_voxels(self) -> np.ndarray:
         return self._H_2_voxels
     
     @property
-    def voxel_distance_matrix(self):
+    def voxel_distance_matrix(self) -> np.ndarray:
         return self._voxel_distance_matrix
     
     @property
-    def gamma_matrix(self):
+    def gamma_matrix(self) -> np.ndarray:
         return self._gamma_matrix
     
     @property
-    def phi_underbar_0(self):
+    def phi_underbar_0(self) -> np.ndarray:
         return self._phi_underbar_0
     
     @property
-    def phi_bar_0(self):
+    def phi_bar_0(self) -> np.ndarray:
         return self._phi_bar_0
     
     @property
-    def phi_underbar_1(self):
+    def phi_underbar_1(self) -> np.ndarray:
         return self._phi_underbar_1
     
     @property
-    def phi_bar_1(self):
+    def phi_bar_1(self) -> np.ndarray:
         return self._phi_bar_1
     
     @property
-    def phi_underbar_2(self):
+    def phi_underbar_2(self) -> np.ndarray:
         return self._phi_underbar_2
     
     @property
-    def phi_bar_2(self):
+    def phi_bar_2(self) -> np.ndarray:
         return self._phi_bar_2
+    
+    @property
+    def M_3c1_1(self) -> csc_matrix:
+        """M_3c1_1 is the coefficient matrix for fraction 1 of constraint 3c1"""
+        return self._M_3c1_1
+    
+    @property
+    def M_3c1_2(self) -> csc_matrix:
+        """M_3c1_2 is the coefficient matrix for fraction 2 of constraint 3c1"""
+        return self._M_3c1_2
+    
+    @property
+    def M_3c2_1(self) -> csc_matrix:
+        """M_3c2_1 is the coefficient matrix for fraction 1 of constraint 3c2"""
+        return self._M_3c2_1
+    
+    @property
+    def M_3c2_2(self) -> csc_matrix:
+        """M_3c2_2 is the coefficient matrix for fraction 2 of constraint 3c2"""
+        return self._M_3c2_2

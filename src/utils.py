@@ -4,6 +4,7 @@ from scipy.sparse.csgraph import shortest_path
 import numpy as np
 from config import GammaParameters
 import logging
+from scipy.sparse import csc_matrix
 
 logger = logging.getLogger(__name__)
 
@@ -134,11 +135,34 @@ def compute_phi_bar_2(phi_bar_1: np.ndarray, sigma: float) -> np.ndarray:
     logger.preprocess("phi_bar_2 computed successfully\n")
     return phi_bar_2
 
+def compute_constraint_3c_1_coefficient_matrix(phi_bar_1: np.ndarray, phi_underbar_1: np.ndarray,
+                                               phi_bar_2: np.ndarray, phi_underbar_2: np.ndarray,
+                                               gamma_matrix: np.ndarray) -> tuple[csc_matrix, csc_matrix]:
+    """
+    Computes the coefficient matrices for constraint 3c1.
+    """
+    logger.preprocess("Computing constraint 3c 1 coefficient matrices...")
+    M_1 = csc_matrix(np.maximum(phi_underbar_1[:, None], phi_bar_1[None, :] - gamma_matrix))
+    M_2 = csc_matrix(np.maximum(phi_underbar_2[:, None], phi_bar_2[None, :] - gamma_matrix))
 
+    assert M_1.shape == gamma_matrix.shape, "M_1 must have the same shape as gamma_matrix"
+    assert M_2.shape == gamma_matrix.shape, "M_2 must have the same shape as gamma_matrix"
 
+    logger.test("Constraint 3c 1 coefficient matrices computed successfully\n")
+    return M_1, M_2
 
+def compute_constraint_3c_2_coefficient_matrix(phi_bar_1: np.ndarray, phi_underbar_1: np.ndarray,
+                                               phi_bar_2: np.ndarray, phi_underbar_2: np.ndarray,
+                                               gamma_matrix: np.ndarray) -> tuple[csc_matrix, csc_matrix]:
+    """
+    Computes the coefficient matrices for constraint 3c2.
+    """
+    logger.preprocess("Computing constraint 3c 2 coefficient matrices...")
+    M_1 = csc_matrix(np.maximum(phi_underbar_1[:, None] + gamma_matrix, phi_bar_1[None, :]))
+    M_2 = csc_matrix(np.maximum(phi_underbar_2[:, None] + gamma_matrix, phi_bar_2[None, :]))
 
+    assert M_1.shape == gamma_matrix.shape, "M_1 must have the same shape as gamma_matrix"
+    assert M_2.shape == gamma_matrix.shape, "M_2 must have the same shape as gamma_matrix"
 
-
-
-
+    logger.test("Constraint 3c 2 coefficient matrices computed successfully\n")
+    return M_1, M_2

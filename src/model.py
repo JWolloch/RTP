@@ -118,3 +118,6 @@ class Model:
 
         self._model.addMConstr(A, y_1, GRB.GREATER_EQUAL, np.zeros(self._T))
         self._model.addMConstr(A, y_2, GRB.GREATER_EQUAL, np.zeros(self._T))
+    
+    def initialize_constraint_3c1(self):
+        pass
