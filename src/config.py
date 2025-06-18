@@ -17,6 +17,11 @@ class ProjectionParameters:
 @dataclass
 class OptimizationParameters:
     N: int = 2
+    lam: float = 0.5
     mu_F: float = 1.5
     d_bar_F: float = 0.95
     d_bar: float = 0.9 * d_bar_F * N
+    d_bar_F_organ_1: float = 0.95
+    d_bar_organ_1: float = 0.9 * d_bar_F_organ_1 * N
+    d_bar_F_organ_2: float = 0.95
+    d_bar_organ_2: float = 0.9 * d_bar_F_organ_2 * N

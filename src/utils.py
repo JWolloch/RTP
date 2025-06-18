@@ -24,9 +24,18 @@ def load_liver_data_mat(filepath: str) -> tuple[csc_matrix, np.ndarray, csc_matr
     H_1_voxels = V[1].astype(int) - 1
     H_2_voxels = V[2].astype(int) - 1
 
+    #get dose matrix only for tumor, organ 1 and organ 2 voxels
+    D_hat = D[:tumor_voxels.shape[0] + H_1_voxels.shape[0] + H_2_voxels.shape[0]]
+
     logger.preprocess("Liver data loaded successfully\n")
 
-    return D, phi_hat, voxel_positions, tumor_voxels, H_1_voxels, H_2_voxels
+    logger.preprocess(f"H_1_voxels.shape: {H_1_voxels.shape}")
+    logger.preprocess(f"H_2_voxels.shape: {H_2_voxels.shape}")
+    logger.preprocess(f"D_hat.shape (Use only relevant entries from D): {D_hat.shape}")
+    logger.preprocess(f"phi_hat.shape: {phi_hat.shape}")
+    logger.preprocess(f"voxel_positions.shape: {voxel_positions.shape}")
+
+    return D_hat, phi_hat, voxel_positions, tumor_voxels, H_1_voxels, H_2_voxels
 
 def compute_voxel_distance_matrix(adj_matrix: csc_matrix) -> np.ndarray:
     """
