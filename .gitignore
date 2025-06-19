@@ -21,3 +21,8 @@ Thumbs.db
 .venv/
 env/
 venv/
+
+*.ilp
+*.lp
+*.mps
+*.sol
