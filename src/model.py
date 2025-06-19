@@ -127,7 +127,10 @@ class Model:
         """
         tumor_vars_f1 = self._dose_tumor_voxels[0].tolist()
         tumor_vars_f2 = self._dose_tumor_voxels[1].tolist()
+        logger.model(f"Building constraint 3c1 for {self._T} tumor voxels...")
         for v in range(self._T):
+            if v % 1000 == 0:  # Log progress every 1000 voxels
+                logger.model(f"Constraint 3c1 progress: {v}/{self._T} voxels processed")
             #======== Fraction 1 =========
             A1 = self._preprocessor.phi_bar_1[v] * csc_matrix(np.ones((self._T, 1)))
             A2 = -self._mu_F * diags(self._preprocessor.M_3c1_1[:, v].toarray().flatten())
@@ -151,6 +154,7 @@ class Model:
             y_2 = gp.MVar.fromlist(var_list_2)
 
             self._model.addMConstr(B, y_2, GRB.LESS_EQUAL, np.zeros(self._T), name=f"constraint_3c1_2_{v}")
+        logger.model("Constraint 3c1 completed.")
     
     def initialize_constraint_3c2(self):
         """
@@ -158,7 +162,10 @@ class Model:
         """
         tumor_vars_f1 = self._dose_tumor_voxels[0].tolist()
         tumor_vars_f2 = self._dose_tumor_voxels[1].tolist()
+        logger.model(f"Building constraint 3c2 for {self._T} tumor voxels...")
         for v in range(self._T):
+            if v % 1000 == 0:  # Log progress every 1000 voxels
+                logger.model(f"Constraint 3c2 progress: {v}/{self._T} voxels processed")
             #======== Fraction 1 =========
             A1 = self._preprocessor.M_3c2_1[:, v]
             A2 = -self._mu_F * diags(self._preprocessor.phi_bar_1)
@@ -182,6 +189,7 @@ class Model:
             y_2 = gp.MVar.fromlist(var_list_2)
 
             self._model.addMConstr(B, y_2, GRB.GREATER_EQUAL, np.zeros(self._T), name=f"constraint_3c2_2_{v}")
+        logger.model("Constraint 3c2 completed.")
     
     def initialize_constraint_3d(self):
         """
@@ -239,14 +247,24 @@ class Model:
         """
         Builds the model.
         """
+        logger.model("Building model constraints...")
+        logger.model("Adding fractional dose constraints...")
         self.fractional_dose_constraint()
+        logger.model("Adding constraint 3b...")
         self.initialize_constraint_3b()
+        logger.model("Adding constraint 3c1...")
         self.initialize_constraint_3c1()
+        logger.model("Adding constraint 3c2...")
         self.initialize_constraint_3c2()
+        logger.model("Adding constraint 3d...")
         self.initialize_constraint_3d()
+        logger.model("Adding constraint 3e...")
         self.initialize_constraint_3e()
+        logger.model("Adding constraint 3f...")
         self.initialize_constraint_3f()
+        logger.model("Setting objective function...")
         self.initialize_objective()
+        logger.model("Model building completed.")
     
     def initialize_objective(self):
         """
