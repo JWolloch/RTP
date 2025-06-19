@@ -4,7 +4,7 @@ from scipy.sparse.csgraph import shortest_path
 import numpy as np
 from config import GammaParameters
 import logging
-from scipy.sparse import csc_matrix
+from scipy.sparse import csc_matrix, vstack
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +26,24 @@ def load_liver_data_mat(filepath: str) -> tuple[csc_matrix, np.ndarray, csc_matr
     H_2_voxels = V[2].astype(int) - 1
 
     #get dose matrix only for tumor, organ 1 and organ 2 voxels
-    D_hat = D[:tumor_voxels.shape[0] + H_1_voxels.shape[0] + H_2_voxels.shape[0]]
+    D_tumor = D[tumor_voxels]
+    D_H_1 = D[H_1_voxels]
+    D_H_2 = D[H_2_voxels]
+
+
+    D_hat = vstack([D_tumor, D_H_1, D_H_2], format="csc")
+
+
+    #print row indices that have only zero entries
+    nonzero_counts = np.diff(D_hat.indptr)
+    zero_rows = np.where(nonzero_counts == 0)[0]
+
+    for row in zero_rows:
+        print(f"Row {row} has only zero entries")
+
 
     logger.preprocess("Liver data loaded successfully\n")
+
 
     logger.preprocess(f"H_1_voxels.shape: {H_1_voxels.shape}")
     logger.preprocess(f"H_2_voxels.shape: {H_2_voxels.shape}")

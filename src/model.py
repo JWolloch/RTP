@@ -28,6 +28,7 @@ class Model:
         self._d_bar_F = self._optimization_parameters.d_bar_F # d_bar_F is the maximum fractional radiation dose
 
         self._model = gp.Model()
+        self._model.setParam(GRB.Param.DualReductions, 0)
 
         self._x = self.initialize_beamlet_intensity_variables()
         self._d_underbar_F = self.initialize_minimum_fractional_dose_variable()
@@ -65,43 +66,43 @@ class Model:
         D_tumor_sparse = csc_matrix(self._D[:self._T])
         A_tumor = -1 * eye(self._T)
         blocks = [A_tumor, D_tumor_sparse]
-        A = hstack(blocks, format="csc")
+        A_tumor = hstack(blocks, format="csc")
 
         tumor_var_list_1 = self._dose_tumor_voxels[0].tolist() + self._x[0].tolist()
         y_tumor_1 = gp.MVar.fromlist(tumor_var_list_1)
         tumor_var_list_2 = self._dose_tumor_voxels[1].tolist() + self._x[1].tolist()
         y_tumor_2 = gp.MVar.fromlist(tumor_var_list_2)
         
-        self._model.addMConstr(A, y_tumor_1, GRB.EQUAL, np.zeros(self._T), name="fractional_dose_constraint_tumor_1")
-        self._model.addMConstr(A, y_tumor_2, GRB.EQUAL, np.zeros(self._T), name="fractional_dose_constraint_tumor_2")
+        self._model.addMConstr(A_tumor, y_tumor_1, GRB.EQUAL, np.zeros(self._T), name="fractional_dose_constraint_tumor_1")
+        self._model.addMConstr(A_tumor, y_tumor_2, GRB.EQUAL, np.zeros(self._T), name="fractional_dose_constraint_tumor_2")
         
         #Now we do the same for healthy voxels in organ 1
         D_healthy_organ_1_sparse = csc_matrix(self._D[self._T:self._T + self._H_1])
         A_healthy_organ_1 = -1 * eye(self._H_1)
         blocks = [A_healthy_organ_1, D_healthy_organ_1_sparse]
-        A = hstack(blocks, format="csc")
+        A_healthy_organ_1 = hstack(blocks, format="csc")
 
         healthy_organ_1_var_list_1 = self._dose_healthy_voxels_organ_1[0].tolist() + self._x[0].tolist()
         y_healthy_organ_1_1 = gp.MVar.fromlist(healthy_organ_1_var_list_1)
         healthy_organ_1_var_list_2 = self._dose_healthy_voxels_organ_1[1].tolist() + self._x[1].tolist()
         y_healthy_organ_1_2 = gp.MVar.fromlist(healthy_organ_1_var_list_2)
 
-        self._model.addMConstr(A, y_healthy_organ_1_1, GRB.EQUAL, np.zeros(self._H_1), name="fractional_dose_constraint_healthy_organ_1_1")
-        self._model.addMConstr(A, y_healthy_organ_1_2, GRB.EQUAL, np.zeros(self._H_1), name="fractional_dose_constraint_healthy_organ_1_2")
+        self._model.addMConstr(A_healthy_organ_1, y_healthy_organ_1_1, GRB.EQUAL, np.zeros(self._H_1), name="fractional_dose_constraint_healthy_organ_1_1")
+        self._model.addMConstr(A_healthy_organ_1, y_healthy_organ_1_2, GRB.EQUAL, np.zeros(self._H_1), name="fractional_dose_constraint_healthy_organ_1_2")
 
         #Now we do the same for healthy voxels in organ 2
         D_healthy_organ_2_sparse = csc_matrix(self._D[self._T + self._H_1:self._T + self._H_1 + self._H_2])
         A_healthy_organ_2 = -1 * eye(self._H_2)
         blocks = [A_healthy_organ_2, D_healthy_organ_2_sparse]
-        A = hstack(blocks, format="csc")
+        A_healthy_organ_2 = hstack(blocks, format="csc")
 
         healthy_organ_2_var_list_1 = self._dose_healthy_voxels_organ_2[0].tolist() + self._x[0].tolist()
         y_healthy_organ_2_1 = gp.MVar.fromlist(healthy_organ_2_var_list_1)
         healthy_organ_2_var_list_2 = self._dose_healthy_voxels_organ_2[1].tolist() + self._x[1].tolist()
         y_healthy_organ_2_2 = gp.MVar.fromlist(healthy_organ_2_var_list_2)
 
-        self._model.addMConstr(A, y_healthy_organ_2_1, GRB.EQUAL, np.zeros(self._H_2), name="fractional_dose_constraint_healthy_organ_2_1")
-        self._model.addMConstr(A, y_healthy_organ_2_2, GRB.EQUAL, np.zeros(self._H_2), name="fractional_dose_constraint_healthy_organ_2_2")
+        self._model.addMConstr(A_healthy_organ_2, y_healthy_organ_2_1, GRB.EQUAL, np.zeros(self._H_2), name="fractional_dose_constraint_healthy_organ_2_1")
+        self._model.addMConstr(A_healthy_organ_2, y_healthy_organ_2_2, GRB.EQUAL, np.zeros(self._H_2), name="fractional_dose_constraint_healthy_organ_2_2")
     
     def initialize_constraint_3b(self):
         """
@@ -210,38 +211,41 @@ class Model:
         """
         Initializes the constraint 3e.
         """
-        A = eye(self._T)
+        A_organ_1 = eye(self._H_1)
+        A_organ_2 = eye(self._H_2)
 
         #======== Organ 1 =========
         y_1 = self._dose_healthy_voxels_organ_1[0]
         y_2 = self._dose_healthy_voxels_organ_1[1]
 
-        self._model.addMConstr(A, y_1, GRB.GREATER_EQUAL, self._optimization_parameters.d_bar_F_organ_1 * np.ones(self._H_1), name="constraint_3e_1")
-        self._model.addMConstr(A, y_2, GRB.GREATER_EQUAL, self._optimization_parameters.d_bar_F_organ_1 * np.ones(self._H_1), name="constraint_3e_2")
+        self._model.addMConstr(A_organ_1, y_1, GRB.LESS_EQUAL, self._optimization_parameters.d_bar_F_organ_1 * np.ones(self._H_1), name="constraint_3e_1")
+        self._model.addMConstr(A_organ_1, y_2, GRB.LESS_EQUAL, self._optimization_parameters.d_bar_F_organ_1 * np.ones(self._H_1), name="constraint_3e_2")
 
         #======== Organ 2 =========
         z_1 = self._dose_healthy_voxels_organ_2[0]
         z_2 = self._dose_healthy_voxels_organ_2[1]
 
-        self._model.addMConstr(A, z_1, GRB.GREATER_EQUAL, self._optimization_parameters.d_bar_F_organ_2 * np.ones(self._H_2), name="constraint_3e_3")
-        self._model.addMConstr(A, z_2, GRB.GREATER_EQUAL, self._optimization_parameters.d_bar_F_organ_2 * np.ones(self._H_2), name="constraint_3e_4")
+        self._model.addMConstr(A_organ_2, z_1, GRB.LESS_EQUAL, self._optimization_parameters.d_bar_F_organ_2 * np.ones(self._H_2), name="constraint_3e_3")
+        self._model.addMConstr(A_organ_2, z_2, GRB.LESS_EQUAL, self._optimization_parameters.d_bar_F_organ_2 * np.ones(self._H_2), name="constraint_3e_4")
     
     def initialize_constraint_3f(self):
         """
         Initializes the constraint 3f.
         """
-        I = eye(self._T)
-        A = hstack([I, I], format="csc")
+        I_organ_1 = eye(self._H_1)
+        I_organ_2 = eye(self._H_2)
+        A_organ_1 = hstack([I_organ_1, I_organ_1], format="csc")
+        A_organ_2 = hstack([I_organ_2, I_organ_2], format="csc")
 
         #======== Organ 1 =========
         y = self._dose_healthy_voxels_organ_1[0].tolist() + self._dose_healthy_voxels_organ_1[1].tolist()
 
-        self._model.addMConstr(A, y, GRB.GREATER_EQUAL, self._optimization_parameters.d_bar_organ_1 * np.ones(self._H_1), name="constraint_3f_1")
+        self._model.addMConstr(A_organ_1, y, GRB.GREATER_EQUAL, self._optimization_parameters.d_bar_organ_1 * np.ones(self._H_1), name="constraint_3f_1")
 
         #======== Organ 2 =========
         z = self._dose_healthy_voxels_organ_2[0].tolist() + self._dose_healthy_voxels_organ_2[1].tolist()
 
-        self._model.addMConstr(A, z, GRB.GREATER_EQUAL, self._optimization_parameters.d_bar_organ_2 * np.ones(self._H_2), name="constraint_3f_2")
+        self._model.addMConstr(A_organ_2, z, GRB.GREATER_EQUAL, self._optimization_parameters.d_bar_organ_2 * np.ones(self._H_2), name="constraint_3f_2")
     
     def build_model(self) -> None:
         """
@@ -252,10 +256,10 @@ class Model:
         self.fractional_dose_constraint()
         logger.model("Adding constraint 3b...")
         self.initialize_constraint_3b()
-        logger.model("Adding constraint 3c1...")
-        self.initialize_constraint_3c1()
-        logger.model("Adding constraint 3c2...")
-        self.initialize_constraint_3c2()
+        # logger.model("Adding constraint 3c1...")
+        # self.initialize_constraint_3c1()
+        # logger.model("Adding constraint 3c2...")
+        # self.initialize_constraint_3c2()
         logger.model("Adding constraint 3d...")
         self.initialize_constraint_3d()
         logger.model("Adding constraint 3e...")
@@ -282,12 +286,14 @@ class Model:
         if self._model_status == GRB.OPTIMAL:
             logger.model("Optimal solution found.")
             self._model.write("my_model.sol")  # Saves the solution (variable values)
-            self._model.write("my_model.lp")   # Optional: Saves the model in readable LP format
+            self._model.write("my_model.lp")   # Saves the model in readable LP format
 
         elif self._model_status == GRB.INFEASIBLE:
             logger.model("Model is infeasible. Computing IIS...")
             self._model.computeIIS()
-            self._model.write("model.ilp")
+            self._model.write("my_model.ilp")
+            self._model.write("my_model.lp")
+
         else:
             logger.model(f"Solver ended with status code: {self._model_status}")
     
