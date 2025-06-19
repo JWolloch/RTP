@@ -5,7 +5,7 @@ import utils
 import gurobipy as gp
 from gurobipy import GRB
 import numpy as np
-from scipy.sparse import csc_matrix, hstack, eye
+from scipy.sparse import csc_matrix, hstack, eye, diags
 
 import logging
 
@@ -35,8 +35,10 @@ class Model:
 
         self._dose_tumor_voxels, self._dose_healthy_voxels_organ_1, self._dose_healthy_voxels_organ_2 = self.initialize_fractional_dose_variables()
 
+        self._model_status = None
+
     def initialize_beamlet_intensity_variables(self):
-        x = self._model.addMVar(shape=(self._N, self._n), name="x")
+        x = self._model.addMVar(shape=(self._N, self._n), lb=0, name="x")
         logger.model(f"Initialized {self._N}x{self._n} beamlet intensity variables")
         return x
     
@@ -70,8 +72,8 @@ class Model:
         tumor_var_list_2 = self._dose_tumor_voxels[1].tolist() + self._x[1].tolist()
         y_tumor_2 = gp.MVar.fromlist(tumor_var_list_2)
         
-        self._model.addMConstr(A, y_tumor_1, GRB.EQUAL, np.zeros(self._T))
-        self._model.addMConstr(A, y_tumor_2, GRB.EQUAL, np.zeros(self._T))
+        self._model.addMConstr(A, y_tumor_1, GRB.EQUAL, np.zeros(self._T), name="fractional_dose_constraint_tumor_1")
+        self._model.addMConstr(A, y_tumor_2, GRB.EQUAL, np.zeros(self._T), name="fractional_dose_constraint_tumor_2")
         
         #Now we do the same for healthy voxels in organ 1
         D_healthy_organ_1_sparse = csc_matrix(self._D[self._T:self._T + self._H_1])
@@ -84,8 +86,8 @@ class Model:
         healthy_organ_1_var_list_2 = self._dose_healthy_voxels_organ_1[1].tolist() + self._x[1].tolist()
         y_healthy_organ_1_2 = gp.MVar.fromlist(healthy_organ_1_var_list_2)
 
-        self._model.addMConstr(A, y_healthy_organ_1_1, GRB.EQUAL, np.zeros(self._H_1))
-        self._model.addMConstr(A, y_healthy_organ_1_2, GRB.EQUAL, np.zeros(self._H_1))
+        self._model.addMConstr(A, y_healthy_organ_1_1, GRB.EQUAL, np.zeros(self._H_1), name="fractional_dose_constraint_healthy_organ_1_1")
+        self._model.addMConstr(A, y_healthy_organ_1_2, GRB.EQUAL, np.zeros(self._H_1), name="fractional_dose_constraint_healthy_organ_1_2")
 
         #Now we do the same for healthy voxels in organ 2
         D_healthy_organ_2_sparse = csc_matrix(self._D[self._T + self._H_1:self._T + self._H_1 + self._H_2])
@@ -98,8 +100,8 @@ class Model:
         healthy_organ_2_var_list_2 = self._dose_healthy_voxels_organ_2[1].tolist() + self._x[1].tolist()
         y_healthy_organ_2_2 = gp.MVar.fromlist(healthy_organ_2_var_list_2)
 
-        self._model.addMConstr(A, y_healthy_organ_2_1, GRB.EQUAL, np.zeros(self._H_2))
-        self._model.addMConstr(A, y_healthy_organ_2_2, GRB.EQUAL, np.zeros(self._H_2))
+        self._model.addMConstr(A, y_healthy_organ_2_1, GRB.EQUAL, np.zeros(self._H_2), name="fractional_dose_constraint_healthy_organ_2_1")
+        self._model.addMConstr(A, y_healthy_organ_2_2, GRB.EQUAL, np.zeros(self._H_2), name="fractional_dose_constraint_healthy_organ_2_2")
     
     def initialize_constraint_3b(self):
         """
@@ -116,8 +118,168 @@ class Model:
         var_list_2 = [self._d_underbar_F] + self._dose_tumor_voxels[1].tolist()
         y_2 = gp.MVar.fromlist(var_list_2)
 
-        self._model.addMConstr(A, y_1, GRB.GREATER_EQUAL, np.zeros(self._T))
-        self._model.addMConstr(A, y_2, GRB.GREATER_EQUAL, np.zeros(self._T))
+        self._model.addMConstr(A, y_1, GRB.GREATER_EQUAL, np.zeros(self._T), name="constraint_3b_1")
+        self._model.addMConstr(A, y_2, GRB.GREATER_EQUAL, np.zeros(self._T), name="constraint_3b_2")
     
     def initialize_constraint_3c1(self):
-        pass
+        """
+        Initializes the constraint 3c1.
+        """
+        tumor_vars_f1 = self._dose_tumor_voxels[0].tolist()
+        tumor_vars_f2 = self._dose_tumor_voxels[1].tolist()
+        for v in range(self._T):
+            #======== Fraction 1 =========
+            A1 = self._preprocessor.phi_bar_1[v] * csc_matrix(np.ones((self._T, 1)))
+            A2 = -self._mu_F * diags(self._preprocessor.M_3c1_1[:, v].toarray().flatten())
+
+            blocks = [A1, A2]
+            A = hstack(blocks, format="csc")
+
+            var_list_1 = [tumor_vars_f1[v]] + tumor_vars_f1
+            y_1 = gp.MVar.fromlist(var_list_1)
+
+            self._model.addMConstr(A, y_1, GRB.LESS_EQUAL, np.zeros(self._T), name=f"constraint_3c1_1_{v}")
+
+            #======== Fraction 2 =========
+            B1 = self._preprocessor.phi_bar_2[v] * csc_matrix(np.ones((self._T, 1)))
+            B2 = -self._mu_F * diags(self._preprocessor.M_3c1_2[:, v].toarray().flatten())
+
+            blocks = [B1, B2]
+            B = hstack(blocks, format="csc")
+
+            var_list_2 = [tumor_vars_f2[v]] + tumor_vars_f2
+            y_2 = gp.MVar.fromlist(var_list_2)
+
+            self._model.addMConstr(B, y_2, GRB.LESS_EQUAL, np.zeros(self._T), name=f"constraint_3c1_2_{v}")
+    
+    def initialize_constraint_3c2(self):
+        """
+        Initializes the constraint 3c2.
+        """
+        tumor_vars_f1 = self._dose_tumor_voxels[0].tolist()
+        tumor_vars_f2 = self._dose_tumor_voxels[1].tolist()
+        for v in range(self._T):
+            #======== Fraction 1 =========
+            A1 = self._preprocessor.M_3c2_1[:, v]
+            A2 = -self._mu_F * diags(self._preprocessor.phi_bar_1)
+
+            blocks = [A1, A2]
+            A = hstack(blocks, format="csc")
+
+            var_list_1 = [tumor_vars_f1[v]] + tumor_vars_f1
+            y_1 = gp.MVar.fromlist(var_list_1)
+
+            self._model.addMConstr(A, y_1, GRB.GREATER_EQUAL, np.zeros(self._T), name=f"constraint_3c2_1_{v}")
+
+            #======== Fraction 2 =========
+            B1 = self._preprocessor.M_3c2_2[:, v]
+            B2 = -self._mu_F * diags(self._preprocessor.phi_bar_2)
+
+            blocks = [B1, B2]
+            B = hstack(blocks, format="csc")
+
+            var_list_2 = [tumor_vars_f2[v]] + tumor_vars_f2
+            y_2 = gp.MVar.fromlist(var_list_2)
+
+            self._model.addMConstr(B, y_2, GRB.GREATER_EQUAL, np.zeros(self._T), name=f"constraint_3c2_2_{v}")
+    
+    def initialize_constraint_3d(self):
+        """
+        Initializes the constraint 3d.
+        """
+        A1 = -1 * csc_matrix(np.ones((self._T, 1)))
+        A2 = diags(self._preprocessor.phi_underbar_1)
+        A3 = diags(self._preprocessor.phi_underbar_2)
+        blocks = [A1, A2, A3]
+        A = hstack(blocks, format="csc")
+
+        var_list = [self._d_underbar] + self._dose_tumor_voxels[0].tolist() + self._dose_tumor_voxels[1].tolist()
+        y = gp.MVar.fromlist(var_list)
+
+        self._model.addMConstr(A, y, GRB.GREATER_EQUAL, np.zeros(self._T), name="constraint_3d")
+    
+    def initialize_constraint_3e(self):
+        """
+        Initializes the constraint 3e.
+        """
+        A = eye(self._T)
+
+        #======== Organ 1 =========
+        y_1 = self._dose_healthy_voxels_organ_1[0]
+        y_2 = self._dose_healthy_voxels_organ_1[1]
+
+        self._model.addMConstr(A, y_1, GRB.GREATER_EQUAL, self._optimization_parameters.d_bar_F_organ_1 * np.ones(self._H_1), name="constraint_3e_1")
+        self._model.addMConstr(A, y_2, GRB.GREATER_EQUAL, self._optimization_parameters.d_bar_F_organ_1 * np.ones(self._H_1), name="constraint_3e_2")
+
+        #======== Organ 2 =========
+        z_1 = self._dose_healthy_voxels_organ_2[0]
+        z_2 = self._dose_healthy_voxels_organ_2[1]
+
+        self._model.addMConstr(A, z_1, GRB.GREATER_EQUAL, self._optimization_parameters.d_bar_F_organ_2 * np.ones(self._H_2), name="constraint_3e_3")
+        self._model.addMConstr(A, z_2, GRB.GREATER_EQUAL, self._optimization_parameters.d_bar_F_organ_2 * np.ones(self._H_2), name="constraint_3e_4")
+    
+    def initialize_constraint_3f(self):
+        """
+        Initializes the constraint 3f.
+        """
+        I = eye(self._T)
+        A = hstack([I, I], format="csc")
+
+        #======== Organ 1 =========
+        y = self._dose_healthy_voxels_organ_1[0].tolist() + self._dose_healthy_voxels_organ_1[1].tolist()
+
+        self._model.addMConstr(A, y, GRB.GREATER_EQUAL, self._optimization_parameters.d_bar_organ_1 * np.ones(self._H_1), name="constraint_3f_1")
+
+        #======== Organ 2 =========
+        z = self._dose_healthy_voxels_organ_2[0].tolist() + self._dose_healthy_voxels_organ_2[1].tolist()
+
+        self._model.addMConstr(A, z, GRB.GREATER_EQUAL, self._optimization_parameters.d_bar_organ_2 * np.ones(self._H_2), name="constraint_3f_2")
+    
+    def build_model(self) -> None:
+        """
+        Builds the model.
+        """
+        self.fractional_dose_constraint()
+        self.initialize_constraint_3b()
+        self.initialize_constraint_3c1()
+        self.initialize_constraint_3c2()
+        self.initialize_constraint_3d()
+        self.initialize_constraint_3e()
+        self.initialize_constraint_3f()
+        self.initialize_objective()
+    
+    def initialize_objective(self):
+        """
+        Initializes the objective.
+        """
+        self._model.setObjective(self._d_underbar + self._optimization_parameters.lam * self._d_underbar_F, GRB.MAXIMIZE)
+    
+    def solve(self) -> None:
+        """
+        Solves the model.
+        """
+        logger.model(f"Solving model...")
+        self._model.optimize()
+        self._model_status = self._model.Status
+        if self._model_status == GRB.OPTIMAL:
+            logger.model("Optimal solution found.")
+            self._model.write("my_model.sol")  # Saves the solution (variable values)
+            self._model.write("my_model.lp")   # Optional: Saves the model in readable LP format
+
+        elif self._model_status == GRB.INFEASIBLE:
+            logger.model("Model is infeasible. Computing IIS...")
+            self._model.computeIIS()
+            self._model.write("model.ilp")
+        else:
+            logger.model(f"Solver ended with status code: {self._model_status}")
+    
+    def get_solution(self) -> dict[str, np.ndarray] | None:
+        """
+        Returns the solution.
+        """
+        if self._model_status == GRB.OPTIMAL:
+            return {
+                "beamlet_intensities": self._x.X,
+                "d_underbar_F": self._d_underbar_F.X,
+                "d_underbar": self._d_underbar.X,
+            }

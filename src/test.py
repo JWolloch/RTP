@@ -21,9 +21,9 @@ print(phi_initial_lower_bound[:, None])
 
 print(phi_underbar_1)
 print(phi_bar_1)
-
 a = np.array([1, 2, 3, 4, 5])
-A = np.diag(a)
+aT = a.T
+A = np.diag(aT)
 print(A)
-
 print(A.shape)
+print(np.diag(a)[:,1].shape)
