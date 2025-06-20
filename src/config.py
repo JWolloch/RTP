@@ -17,6 +17,7 @@ class ProjectionParameters:
 @dataclass
 class OptimizationParameters:
     debug: bool = True
+    debug_n: int = 100
     N: int = 2
     lam: float = 0.5
     mu_F: float = 2
