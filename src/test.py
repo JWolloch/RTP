@@ -1,29 +1,17 @@
 import numpy as np
 
-phi = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
+arr = np.array([10.34, 557.23, 12.39, 4.00, 78.9])
+mask = arr >= 11
 
-gamma_matrix = np.array([[0.01, 0.02, 0.03, 0.04, 0.05],
-                        [0.02, 0.03, 0.04, 0.05, 0.06],
-                        [0.03, 0.04, 0.05, 0.06, 0.07],
-                        [0.04, 0.05, 0.06, 0.07, 0.08],
-                        [0.05, 0.06, 0.07, 0.08, 0.09]])
+masked_arr_indices = np.where(mask)[0]
 
-delta = 0.25
+masked_arr = arr[masked_arr_indices]
 
-phi_initial_lower_bound = np.maximum(phi - delta, 0)
+n = min(2, masked_arr.shape[0])
 
-print(phi_initial_lower_bound)
+top_n_indices = np.argsort(masked_arr)[-n:]
 
-phi_underbar_1 = np.max(phi_initial_lower_bound[:, None] - gamma_matrix, axis=0)
-phi_bar_1 = np.min(phi_initial_lower_bound[:, None] + gamma_matrix, axis=0)
+most_violated_indices = masked_arr_indices[top_n_indices]
 
-print(phi_initial_lower_bound[:, None])
-
-print(phi_underbar_1)
-print(phi_bar_1)
-a = np.array([1, 2, 3, 4, 5])
-aT = a.T
-A = np.diag(aT)
-print(A)
-print(A.shape)
-print(np.diag(a)[:,1].shape)
+print(most_violated_indices)
+print(arr[most_violated_indices])

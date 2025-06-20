@@ -18,10 +18,20 @@ if __name__ == "__main__":
     
     # Create and build the model
     model = Model(preprocessor, optimization_params, debug=optimization_params.debug)
-    model.build_model()
-    
-    # Solve the model
-    model.solve()
+
+    if optimization_params.row_generation:
+        model.build_full_model()
+        model.solve_full_model()
+    else:
+        model.build_model_without_homogeneity_constraints()
+        found_feasible_solution, total_constraints_added, objective_value_per_iteration, c1_constraints_added_per_iteration, c2_constraints_added_per_iteration = model.row_generation_model_solver()
+
+        if found_feasible_solution:
+            model.build_model_with_homogeneity_constraints()
+            model.solve()
+        else:
+            print("No feasible solution found. Check the model status.")
+
     
     # Get and display results
     solution = model.get_solution()

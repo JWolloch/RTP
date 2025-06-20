@@ -2,8 +2,8 @@ from dataclasses import dataclass
 
 @dataclass
 class GammaParameters:
-    max_dist: float = 100.0
-    gamma_constant: float = 0.04
+    max_dist: float = 10.0
+    gamma_constant: float = 0.15
     alpha_0: float = 0.0292761
     alpha_1: float = -0.0013514
     alpha_2: float = 0.0128265
@@ -17,10 +17,13 @@ class ProjectionParameters:
 @dataclass
 class OptimizationParameters:
     debug: bool = True
+    row_generation: bool = True
     debug_n: int = 100
+    n_most_violated_constraints: int = 10
+    max_row_generation_iterations: int = 100
     N: int = 2
     lam: float = 0.5
-    mu_F: float = 2
+    mu_F: float = 1.3
     d_bar_F: float = 0.95
     d_bar: float = 0.9 * d_bar_F * N
     d_bar_F_organ_1: float = 0.95
