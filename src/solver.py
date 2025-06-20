@@ -17,7 +17,7 @@ if __name__ == "__main__":
     optimization_params = OptimizationParameters()
     
     # Create and build the model
-    model = Model(preprocessor, optimization_params)
+    model = Model(preprocessor, optimization_params, debug=optimization_params.debug)
     model.build_model()
     
     # Solve the model
