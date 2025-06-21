@@ -39,17 +39,7 @@ def load_liver_data_mat(filepath: str) -> tuple[csc_matrix, np.ndarray, csc_matr
 
     D_hat = vstack([D_tumor, D_H_1, D_H_2], format="csc")
 
-
-    #print row indices that have only zero entries
-    nonzero_counts = np.diff(D_hat.indptr)
-    zero_rows = np.where(nonzero_counts == 0)[0]
-
-    for row in zero_rows:
-        print(f"Row {row} has only zero entries")
-
-
     logger.preprocess("Liver data loaded successfully\n")
-
 
     logger.preprocess(f"H_1_voxels.shape: {H_1_voxels.shape}")
     logger.preprocess(f"H_2_voxels.shape: {H_2_voxels.shape}")
