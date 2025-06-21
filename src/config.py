@@ -26,7 +26,7 @@ class OptimizationParameters:
     debug_n: int = 1000
     solution_method: SolutionMethod = SolutionMethod.PRIMAL_SIMPLEX # Run with [Primal-simplex, Primal-dual-simplex, Barrier]
     row_generation: bool = True
-    n_most_violated_constraints: int = 2 # Run with [2, 3, 5, 10]
+    n_most_violated_constraints: int = 1 # Run with [1, 2, 5, 10]
     max_row_generation_iterations: int = 100
     N: int = 2
     lam: float = 0.5

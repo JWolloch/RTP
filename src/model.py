@@ -40,6 +40,7 @@ class Model:
         # Write Gurobi logs to file (but NOT to console)
         self._model.setParam(GRB.Param.LogFile, f"results/{self._folder_name}/gurobi.log")
         self._model.setParam(GRB.Param.DualReductions, 0)
+        self._model.setParam(GRB.Param.Method, self._optimization_parameters.solution_method.value)
 
 
         self._x = self.initialize_beamlet_intensity_variables()
