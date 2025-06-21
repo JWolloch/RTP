@@ -478,14 +478,15 @@ class Model:
                 indices_to_consider_1 = np.setdiff1d(self._indices, v1_old) #avoiding re-evaluating already added constraints
                 k1 = indices_to_consider_1.shape[0]
                 A1 = self._preprocessor.phi_bar_1[v] * csc_matrix(np.ones((k1, 1)))
-                A2 = -self._mu_F * diags(self._preprocessor.M_3c1_1[indices_to_consider_1, v].A.flatten())
+                A2 = -self._mu_F * diags(self._preprocessor.M_3c1_1[indices_to_consider_1, v].toarray().flatten())
+
 
                 blocks = [A1, A2]
                 A = hstack(blocks, format="csc")
 
                 indices = np.concatenate((np.array([v]), indices_to_consider_1))
                 y_1 = self._dose_tumor_voxels[0][indices]
-                y_1_value = y_1.getValue()
+                y_1_value = y_1.X
 
                 constraint_lhs_1 = (A @ y_1_value).flatten() #constraint lhs
 
@@ -503,21 +504,21 @@ class Model:
 
                 if r_1 > 0:
                     number_of_constraints_added += r_1
-                    self._model.addMConstr(A[most_violated_indices_1], y_1[most_violated_indices_1], GRB.LESS_EQUAL, np.zeros(r_1), name=f"constraint_3c1_1_{v}")
+                    self._model.addMConstr(A[most_violated_indices_1], y_1, GRB.LESS_EQUAL, np.zeros(r_1), name=f"constraint_3c1_1_{v}")
 
 
                 #======== Fraction 2 =========
                 indices_to_consider_2 = np.setdiff1d(self._indices, v2_old) #avoiding re-evaluating already added constraints
                 k2 = indices_to_consider_2.shape[0]
                 B1 = self._preprocessor.phi_bar_2[v] * csc_matrix(np.ones((k2, 1)))
-                B2 = -self._mu_F * diags(self._preprocessor.M_3c1_2[indices_to_consider_2, v].A.flatten())
+                B2 = -self._mu_F * diags(self._preprocessor.M_3c1_2[indices_to_consider_2, v].toarray().flatten())
 
                 blocks = [B1, B2]
                 B = hstack(blocks, format="csc")
 
                 indices = np.concatenate((np.array([v]), indices_to_consider_2))
                 y_2 = self._dose_tumor_voxels[1][indices]
-                y_2_value = y_2.getValue()
+                y_2_value = y_2.X
 
                 constraint_lhs_2 = (B @ y_2_value).flatten() #constraint lhs
 
@@ -535,7 +536,7 @@ class Model:
 
                 if r_2 > 0:
                     number_of_constraints_added += r_2
-                    self._model.addMConstr(B[most_violated_indices_2], y_2[most_violated_indices_2], GRB.LESS_EQUAL, np.zeros(r_2), name=f"constraint_3c1_2_{v}")
+                    self._model.addMConstr(B[most_violated_indices_2], y_2, GRB.LESS_EQUAL, np.zeros(r_2), name=f"constraint_3c1_2_{v}")
             
                 self._voxels_already_considered_c1[f"{v}"] = (v1_new, v2_new)
 
@@ -552,14 +553,14 @@ class Model:
                 indices_to_consider_1 = np.setdiff1d(self._indices, v1_old) #avoiding re-evaluating already added constraints
                 k1 = indices_to_consider_1.shape[0]
                 A1 = self._preprocessor.phi_bar_1[v] * csc_matrix(np.ones((k1, 1)))
-                A2 = -self._mu_F * diags(self._preprocessor.M_3c1_1[indices_to_consider_1, v].A.flatten())
+                A2 = -self._mu_F * diags(self._preprocessor.M_3c1_1[indices_to_consider_1, v].toarray().flatten())
 
                 blocks = [A1, A2]
                 A = hstack(blocks, format="csc")
 
                 indices = np.concatenate((np.array([v]), indices_to_consider_1))
                 y_1 = self._dose_tumor_voxels[0][indices]
-                y_1_value = y_1.getValue()
+                y_1_value = y_1.X
 
                 constraint_lhs_1 = (A @ y_1_value).flatten() #constraint lhs
 
@@ -577,20 +578,20 @@ class Model:
 
                 if r_1 > 0:
                     number_of_constraints_added += r_1
-                    self._model.addMConstr(A[most_violated_indices_1], y_1[most_violated_indices_1], GRB.LESS_EQUAL, np.zeros(r_1), name=f"constraint_3c1_1_{v}")
+                    self._model.addMConstr(A[most_violated_indices_1], y_1, GRB.LESS_EQUAL, np.zeros(r_1), name=f"constraint_3c1_1_{v}")
 
                 #======== Fraction 2 =========
                 indices_to_consider_2 = np.setdiff1d(self._indices, v2_old) #avoiding re-evaluating already added constraints
                 k2 = indices_to_consider_2.shape[0]
                 B1 = self._preprocessor.phi_bar_2[v] * csc_matrix(np.ones((k2, 1)))
-                B2 = -self._mu_F * diags(self._preprocessor.M_3c1_2[indices_to_consider_2, v].A.flatten())
+                B2 = -self._mu_F * diags(self._preprocessor.M_3c1_2[indices_to_consider_2, v].toarray().flatten())
 
                 blocks = [B1, B2]
                 B = hstack(blocks, format="csc")
 
                 indices = np.concatenate((np.array([v]), indices_to_consider_2))
                 y_2 = self._dose_tumor_voxels[1][indices]
-                y_2_value = y_2.getValue()
+                y_2_value = y_2.X
 
                 constraint_lhs_2 = (B @ y_2_value).flatten() #constraint lhs
 
@@ -608,7 +609,7 @@ class Model:
 
                 if r_2 > 0:
                     number_of_constraints_added += r_2
-                    self._model.addMConstr(B[most_violated_indices_2], y_2[most_violated_indices_2], GRB.LESS_EQUAL, np.zeros(r_2), name=f"constraint_3c1_2_{v}")
+                    self._model.addMConstr(B[most_violated_indices_2], y_2, GRB.LESS_EQUAL, np.zeros(r_2), name=f"constraint_3c1_2_{v}")
 
                 self._voxels_already_considered_c1[f"{v}"] = (v1_new, v2_new)
 
@@ -641,7 +642,7 @@ class Model:
 
                 indices = np.concatenate((np.array([v]), indices_to_consider_1))
                 y_1 = self._dose_tumor_voxels[0][indices]
-                y_1_value = y_1.getValue()
+                y_1_value = y_1.X
 
                 constraint_lhs_1 = (A @ y_1_value).flatten() #constraint lhs
 
@@ -659,7 +660,7 @@ class Model:
 
                 if r_1 > 0:
                     number_of_constraints_added += r_1
-                    self._model.addMConstr(A[most_violated_indices_1], y_1[most_violated_indices_1], GRB.LESS_EQUAL, np.zeros(r_1), name=f"constraint_3c2_1_{v}")
+                    self._model.addMConstr(A[most_violated_indices_1], y_1, GRB.LESS_EQUAL, np.zeros(r_1), name=f"constraint_3c2_1_{v}")
 
                 #======== Fraction 2 =========
                 indices_to_consider_2 = np.setdiff1d(self._indices, v2_old) #avoiding re-evaluating already added constraints
@@ -671,7 +672,7 @@ class Model:
 
                 indices = np.concatenate((np.array([v]), indices_to_consider_2))
                 y_2 = self._dose_tumor_voxels[1][indices]
-                y_2_value = y_2.getValue()
+                y_2_value = y_2.X
 
                 constraint_lhs_2 = (B @ y_2_value).flatten() #constraint lhs
 
@@ -689,7 +690,7 @@ class Model:
 
                 if r_2 > 0:
                     number_of_constraints_added += r_2
-                    self._model.addMConstr(B[most_violated_indices_2], y_2[most_violated_indices_2], GRB.LESS_EQUAL, np.zeros(r_2), name=f"constraint_3c2_2_{v}")
+                    self._model.addMConstr(B[most_violated_indices_2], y_2, GRB.LESS_EQUAL, np.zeros(r_2), name=f"constraint_3c2_2_{v}")
 
                 self._voxels_already_considered_c2[f"{v}"] = (v1_new, v2_new)
 
@@ -710,7 +711,7 @@ class Model:
 
                 indices = np.concatenate((np.array([v]), indices_to_consider_1))
                 y_1 = self._dose_tumor_voxels[0][indices]
-                y_1_value = y_1.getValue()
+                y_1_value = y_1.X
 
                 constraint_lhs_1 = (A @ y_1_value).flatten() #constraint lhs
 
@@ -728,7 +729,7 @@ class Model:
 
                 if r_1 > 0:
                     number_of_constraints_added += r_1
-                    self._model.addMConstr(A[most_violated_indices_1], y_1[most_violated_indices_1], GRB.LESS_EQUAL, np.zeros(r_1), name=f"constraint_3c2_1_{v}")
+                    self._model.addMConstr(A[most_violated_indices_1], y_1, GRB.LESS_EQUAL, np.zeros(r_1), name=f"constraint_3c2_1_{v}")
 
                 #======== Fraction 2 =========
                 indices_to_consider_2 = np.setdiff1d(self._indices, v2_old) #avoiding re-evaluating already added constraints
@@ -740,7 +741,7 @@ class Model:
 
                 indices = np.concatenate((np.array([v]), indices_to_consider_2))
                 y_2 = self._dose_tumor_voxels[1][indices]
-                y_2_value = y_2.getValue()
+                y_2_value = y_2.X
 
                 constraint_lhs_2 = (B @ y_2_value).flatten() #constraint lhs
 
@@ -758,7 +759,7 @@ class Model:
 
                 if r_2 > 0:
                     number_of_constraints_added += r_2
-                    self._model.addMConstr(B[most_violated_indices_2], y_2[most_violated_indices_2], GRB.LESS_EQUAL, np.zeros(r_2), name=f"constraint_3c2_2_{v}")
+                    self._model.addMConstr(B[most_violated_indices_2], y_2, GRB.LESS_EQUAL, np.zeros(r_2), name=f"constraint_3c2_2_{v}")
 
                 self._voxels_already_considered_c2[f"{v}"] = (v1_new, v2_new)
 
@@ -772,7 +773,7 @@ class Model:
         Adds the most violated constraints iteratively until all are satisfied.
         """
         logger.model("Starting row generation solver...")
-        self._model.setParam(GRB.Param.OutputFlag, 0)  # Suppress output
+        #self._model.setParam(GRB.Param.OutputFlag, 0)  # Suppress output
 
         max_iterations = self._optimization_parameters.max_row_generation_iterations
         iteration = 0

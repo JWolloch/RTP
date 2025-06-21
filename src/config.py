@@ -18,7 +18,7 @@ class ProjectionParameters:
 class OptimizationParameters:
     debug: bool = True
     row_generation: bool = True
-    debug_n: int = 100
+    debug_n: int = 500
     n_most_violated_constraints: int = 10
     max_row_generation_iterations: int = 100
     N: int = 2
