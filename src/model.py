@@ -1,6 +1,6 @@
 from preprocessor import Preprocessor
 from config import OptimizationParameters
-import utils
+import time
 
 import gurobipy as gp
 from gurobipy import GRB
@@ -38,6 +38,7 @@ class Model:
         self._dose_tumor_voxels, self._dose_healthy_voxels_organ_1, self._dose_healthy_voxels_organ_2 = self.initialize_fractional_dose_variables()
 
         self._model_status = None
+        self._solver_time = None
         
         if self._debug:
             self._indices = np.arange(self._debug_n, dtype=int)
@@ -783,6 +784,8 @@ class Model:
         total_constraints_added = 0
         found_feasible_solution = False
 
+        start_time = time.time()
+
         while iteration < max_iterations:
             logger.model(f"--- Row Generation Iteration {iteration + 1} ---")
 
@@ -840,6 +843,8 @@ class Model:
         else:
             logger.model(f"Solver ended with status code: {self._model_status}")
 
+        self._solver_time = time.time() - start_time
+
         return found_feasible_solution, total_constraints_added, objective_value_per_iteration, c1_constraints_added_per_iteration, c2_constraints_added_per_iteration
 
 
@@ -851,6 +856,12 @@ class Model:
         if self._model_status == GRB.OPTIMAL:
             return {
                 "beamlet_intensities": self._x.X,
+                "tumor_voxels_bio-adjusted_dosages_fraction_1": self._dose_tumor_voxels[0].X,
+                "organ1_voxels_bio-adjusted_dosages_fraction_1": self._dose_healthy_voxels_organ_1[0].X,
+                "organ2_voxels_bio-adjusted_dosages_fraction_1": self._dose_healthy_voxels_organ_2[0].X,
+                "tumor_voxels_bio-adjusted_dosages_fraction_2": self._dose_tumor_voxels[1].X,
+                "organ1_voxels_bio-adjusted_dosages_fraction_2": self._dose_healthy_voxels_organ_1[1].X,
+                "organ2_voxels_bio-adjusted_dosages_fraction_2": self._dose_healthy_voxels_organ_2[1].X,
                 "d_underbar_F": self._d_underbar_F.X,
                 "d_underbar": self._d_underbar.X,
             }
