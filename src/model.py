@@ -798,8 +798,7 @@ class Model:
 
         while iteration < max_iterations:
             logger.model(f"--- Row Generation Iteration {iteration + 1} ---")
-            logger.model(f"Invoking Gurobi solver - {self._model.NumVars} variables, {self._model.NumConstrs} constraints...")
-            logger.model(f"Solution method: {self._optimization_parameters.solution_method.name}")
+            logger.model(f"Invoking Gurobi solver - solution method: {self._optimization_parameters.solution_method.name}...")
             self._model.optimize()
             self._model_status = self._model.Status
 
