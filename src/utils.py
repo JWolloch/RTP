@@ -1,8 +1,15 @@
+import os
+import psutil
+import threading
+import time
+import json
+from dataclasses import asdict
+from typing import Any
 from scipy.io import loadmat
 from scipy.sparse import csc_matrix, issparse, vstack
 from scipy.sparse.csgraph import shortest_path
 import numpy as np
-from config import GammaParameters
+from config import GammaParameters, ProjectionParameters, OptimizationParameters
 import logging
 
 logger = logging.getLogger(__name__)
@@ -180,3 +187,54 @@ def compute_constraint_3c_2_coefficient_matrix(phi_bar_1: np.ndarray, phi_underb
 
     logger.test("Constraint 3c 2 coefficient matrices computed successfully\n")
     return M_1, M_2
+
+def save_run_results(
+    gamma_params: GammaParameters,
+    proj_params: ProjectionParameters,
+    opt_params: OptimizationParameters,
+    solve_time_seconds: float,
+    peak_memory_mb: float,
+    solution_dict: dict[str, Any],
+):
+    # Folder name based on solution method and constraint count
+    folder_name = f"{opt_params.solution_method.name}_{opt_params.n_most_violated_constraints}"
+    folder_path = os.path.join("results", folder_name)
+    os.makedirs(folder_path, exist_ok=True)
+
+    # Save parameters and solver time
+    run_info = {
+        "gamma_parameters": asdict(gamma_params),
+        "projection_parameters": asdict(proj_params),
+        "optimization_parameters": asdict(opt_params),
+        "solve_time_seconds": round(solve_time_seconds, 3),
+        "peak_memory_mb": round(peak_memory_mb, 3)
+    }
+    with open(os.path.join(folder_path, "run_info.json"), "w") as f:
+        json.dump(run_info, f, indent=4)
+
+    # Save solution dictionary
+    with open(os.path.join(folder_path, "solution.json"), "w") as f:
+        json.dump(solution_dict, f, indent=4)
+
+class MemoryMonitor:
+    def __init__(self, interval: float = 0.05):
+        self.interval = interval
+        self.peak_memory = 0
+        self._stop_event = threading.Event()
+        self._thread = threading.Thread(target=self._monitor)
+
+    def _monitor(self):
+        process = psutil.Process(os.getpid())
+        while not self._stop_event.is_set():
+            mem = process.memory_info().rss
+            if mem > self.peak_memory:
+                self.peak_memory = mem
+            time.sleep(self.interval)
+
+    def start(self):
+        self._stop_event.clear()
+        self._thread.start()
+
+    def stop(self):
+        self._stop_event.set()
+        self._thread.join()

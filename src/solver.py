@@ -1,6 +1,7 @@
 from preprocessor import Preprocessor
 from model import Model
-from config import OptimizationParameters
+from config import OptimizationParameters, GammaParameters, ProjectionParameters
+from utils import MemoryMonitor, save_run_results
 from logger_config import configure_logging
 import logging
 
@@ -21,6 +22,11 @@ if __name__ == "__main__":
     # Create and build the model
     model = Model(preprocessor, optimization_params, debug=optimization_params.debug)
 
+    # Start monitoring
+    memory_monitor = MemoryMonitor(interval=0.1)
+    memory_monitor.start()
+
+    # --- Start model solving section ---
     if optimization_params.row_generation:
         if optimization_params.debug:
             logger.solver("In debug mode")
@@ -33,9 +39,16 @@ if __name__ == "__main__":
     else:
         model.build_full_model()
         model.solve_full_model()
+    # --- End model solving section ---
+
+    # Stop monitoring
+    memory_monitor.stop()
+    peak_memory_mb = memory_monitor.peak_memory / (1024**2)
 
     logger.solver("Process Completed")
     logger.solver(f"Solver time: {model._solver_time:.2f} seconds")
+    logger.solver(f"Peak memory usage during model solution: {peak_memory_mb:.2f} MB")
+
     # Get and display results
     solution = model.get_solution()
     if solution:
@@ -51,5 +64,14 @@ if __name__ == "__main__":
             logger.solver(f"Objective value per iteration: {objective_value_per_iteration}")
             logger.solver(f"Constraints added per iteration 3C1: {c1_constraints_added_per_iteration}")
             logger.solver(f"Constraints added per iteration 3C2: {c2_constraints_added_per_iteration}")
+        # Save results
+        save_run_results(
+            gamma_params=GammaParameters(),
+            proj_params=ProjectionParameters(),
+            opt_params=optimization_params,
+            solve_time_seconds=model._solver_time,
+            peak_memory_mb=peak_memory_mb,
+            solution_dict=solution
+        )
     else:
         logger.solver("No optimal solution found. Check the model status.")

@@ -8,6 +8,8 @@ import numpy as np
 from scipy.sparse import csc_matrix, hstack, eye, diags
 
 import logging
+import io
+from contextlib import redirect_stdout
 
 logger = logging.getLogger(__name__)
 
@@ -426,7 +428,7 @@ class Model:
         Solves the full model.
         """
         logger.model(f"Solving model...")
-        self._model.optimize()
+        self._optimize_with_redirect()
         self._model_status = self._model.Status
         if self._model_status == GRB.OPTIMAL:
             logger.model("Optimal solution found.")
@@ -789,7 +791,7 @@ class Model:
         while iteration < max_iterations:
             logger.model(f"--- Row Generation Iteration {iteration + 1} ---")
 
-            self._model.optimize()
+            self._optimize_with_redirect()
             self._model_status = self._model.Status
 
             if self._model_status == GRB.OPTIMAL:
@@ -830,7 +832,7 @@ class Model:
         # Final solve to finalize solution
         logger.model("Final solve with all constraints...")
         self._model.setParam(GRB.Param.OutputFlag, 1)  # Enable output
-        self._model.optimize()
+        self._optimize_with_redirect()
         self._model_status = self._model.Status
 
         if self._model_status == GRB.OPTIMAL:
@@ -865,3 +867,14 @@ class Model:
                 "d_underbar_F": self._d_underbar_F.X,
                 "d_underbar": self._d_underbar.X,
             }
+    
+    def _optimize_with_redirect(self):
+        """
+        Calls self._model.optimize() while capturing stdout and redirecting
+        Gurobi logs to logger.gurobi().
+        """
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self._model.optimize()
+        for line in output.getvalue().splitlines():
+            logger.gurobi(line)
