@@ -5,6 +5,7 @@ class SolutionMethod(IntEnum):
     PRIMAL_SIMPLEX = 0
     PRIMAL_DUAL_SIMPLEX = 1
     BARRIER = 2
+    CONCURRENT = 3
 
 @dataclass
 class GammaParameters:
