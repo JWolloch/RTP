@@ -837,11 +837,17 @@ class Model:
 
         if self._model_status == GRB.OPTIMAL:
             logger.model("Row generation: Optimal solution found.")
-            self._model.write("rowgen_model.sol")
+            if self._debug:
+                self._model.write("debug_rowgen_model.sol")
+            else:
+                self._model.write("rowgen_model.sol")
         elif self._model_status == GRB.INFEASIBLE:
             logger.model("Row generation model is infeasible. Computing IIS...")
             self._model.computeIIS()
-            self._model.write("rowgen_model.ilp")
+            if self._debug:
+                self._model.write("debug_rowgen_model.ilp")
+            else:
+                self._model.write("rowgen_model.ilp")
         else:
             logger.model(f"Solver ended with status code: {self._model_status}")
 

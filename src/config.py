@@ -22,7 +22,7 @@ class ProjectionParameters:
 
 @dataclass
 class OptimizationParameters:
-    debug: bool = False
+    debug: bool = True
     debug_n: int = 1000
     solution_method: SolutionMethod = SolutionMethod.PRIMAL_SIMPLEX # Run with [Primal-simplex, Primal-dual-simplex, Barrier]
     row_generation: bool = True
