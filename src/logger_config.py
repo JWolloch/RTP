@@ -6,12 +6,10 @@ def configure_logging():
     PREPROCESS_LEVEL = 26
     MODEL_LEVEL = 27
     SOLVER_LEVEL = 28
-    GUROBI_LEVEL = 29
     logging.addLevelName(TEST_LEVEL, "TEST")
     logging.addLevelName(PREPROCESS_LEVEL, "PREPROCESS")
     logging.addLevelName(MODEL_LEVEL, "MODEL")
     logging.addLevelName(SOLVER_LEVEL, "SOLVER")
-    logging.addLevelName(GUROBI_LEVEL, "GUROBI")
 
     def preprocess(self, message, *args, **kwargs):
         if self.isEnabledFor(PREPROCESS_LEVEL):
@@ -28,16 +26,11 @@ def configure_logging():
     def test(self, message, *args, **kwargs):
         if self.isEnabledFor(TEST_LEVEL):
             self._log(TEST_LEVEL, message, args, **kwargs)
-    
-    def gurobi(self, message, *args, **kwargs):
-        if self.isEnabledFor(GUROBI_LEVEL):
-            self._log(GUROBI_LEVEL, message, args, **kwargs)
 
     logging.Logger.test = test
     logging.Logger.preprocess = preprocess
     logging.Logger.model = model
     logging.Logger.solver = solver
-    logging.Logger.gurobi = gurobi
     # ANSI color codes
     CYAN = "\033[96m"
     PURPLE = "\033[95m"
@@ -57,8 +50,6 @@ def configure_logging():
                 record.levelname = f"{YELLOW}{levelname}{RESET}"
             elif levelname == "TEST":
                 record.levelname = f"{GREEN}{levelname}{RESET}"
-            elif levelname == "GUROBI":
-                record.levelname = f"{RED}{levelname}{RESET}"
             elif levelname == "INFO":
                 record.levelname = f"{RESET}{levelname}{RESET}"
             return super().format(record)

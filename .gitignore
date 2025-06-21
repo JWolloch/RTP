@@ -5,8 +5,7 @@ __pycache__/
 # Jupyter checkpoints
 .ipynb_checkpoints/
 
-# Logs and temp files
-*.log
+# Temp files
 *.tmp
 
 # OS-specific files
@@ -26,3 +25,4 @@ venv/
 *.lp
 *.mps
 *.sol
+*.log

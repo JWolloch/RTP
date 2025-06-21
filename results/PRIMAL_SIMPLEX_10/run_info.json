@@ -28,6 +28,6 @@
         "d_bar_F_organ_2": 0.95,
         "d_bar_organ_2": 1.71
     },
-    "solve_time_seconds": 75.209,
-    "peak_memory_mb": 3111.074
+    "solve_time_seconds": 56.758,
+    "peak_memory_mb": 3106.727
 }

@@ -6,15 +6,11 @@ import gurobipy as gp
 from gurobipy import GRB
 import numpy as np
 from scipy.sparse import csc_matrix, hstack, eye, diags
-
+import os
 import logging
 
+
 logger = logging.getLogger(__name__)
-
-class GurobiLogger(gp.Logger):
-    def message(self, msg):
-        logging.getLogger("gurobi").log(29, msg.strip())  # Use custom level 29 ("GUROBI")
-
 
 class Model:
     def __init__(self, preprocessor: Preprocessor, optimization_parameters: OptimizationParameters, debug: bool=False):
@@ -32,10 +28,19 @@ class Model:
         self._mu_F = self._optimization_parameters.mu_F # mu_F - fractional homogeneity parameter
         self._d_bar_F = self._optimization_parameters.d_bar_F # d_bar_F is the maximum fractional radiation dose
 
-        self._model = gp.Model()
-        self._model.setLogger(GurobiLogger())
-        self._model.setParam(GRB.Param.OutputFlag, 1)
+        self._env = gp.Env(empty=True)
+        self._env.setParam(GRB.Param.OutputFlag, 1)
+        self._env.start()
+
+        # Create model using this environment
+        self._model = gp.Model(env=self._env)
+        self._folder_name = f"{self._optimization_parameters.solution_method.name}_{self._optimization_parameters.n_most_violated_constraints}"
+        os.makedirs(f"results/{self._folder_name}", exist_ok=True)
+
+        # Write Gurobi logs to file (but NOT to console)
+        self._model.setParam(GRB.Param.LogFile, f"results/{self._folder_name}/gurobi.log")
         self._model.setParam(GRB.Param.DualReductions, 0)
+
 
         self._x = self.initialize_beamlet_intensity_variables()
         self._d_underbar_F = self.initialize_minimum_fractional_dose_variable()
@@ -793,12 +798,13 @@ class Model:
 
         while iteration < max_iterations:
             logger.model(f"--- Row Generation Iteration {iteration + 1} ---")
-
+            logger.model(f"Invoking Gurobi solver - {self._model.NumVars} variables, {self._model.NumConstrs} constraints...")
+            logger.model(f"Solution method: {self._optimization_parameters.solution_method.name}")
             self._model.optimize()
             self._model_status = self._model.Status
 
             if self._model_status == GRB.OPTIMAL:
-                logger.model(f"Iteration {iteration + 1}: Optimal solution found. Evaluating for violations...")
+                logger.model(f"Iteration {iteration + 1} completed: Optimal solution found. Evaluating for violations...")
             elif self._model_status == GRB.INFEASIBLE:
                 logger.model("Model became infeasible. Aborting.")
                 break
@@ -840,16 +846,16 @@ class Model:
         if self._model_status == GRB.OPTIMAL:
             logger.model("Row generation: Optimal solution found.")
             if self._debug:
-                self._model.write("debug_rowgen_model.sol")
+                self._model.write(f"results/{self._folder_name}/debug_rowgen_model.sol")
             else:
-                self._model.write("rowgen_model.sol")
+                self._model.write(f"results/{self._folder_name}/rowgen_model.sol")
         elif self._model_status == GRB.INFEASIBLE:
             logger.model("Row generation model is infeasible. Computing IIS...")
             self._model.computeIIS()
             if self._debug:
-                self._model.write("debug_rowgen_model.ilp")
+                self._model.write(f"results/{self._folder_name}/debug_rowgen_model.ilp")
             else:
-                self._model.write("rowgen_model.ilp")
+                self._model.write(f"results/{self._folder_name}/rowgen_model.ilp")
         else:
             logger.model(f"Solver ended with status code: {self._model_status}")
 
