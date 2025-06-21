@@ -797,8 +797,10 @@ class Model:
         start_time = time.time()
 
         while iteration < max_iterations:
+            self._model.update()
             logger.model(f"--- Row Generation Iteration {iteration + 1} ---")
             logger.model(f"Invoking Gurobi solver - solution method: {self._optimization_parameters.solution_method.name}...")
+            logger.model(f"Model has {self._model.NumVars} variables and {self._model.NumConstrs} constraints.")
             logger.model(f"At most {self._optimization_parameters.n_most_violated_constraints} violated constraints will be added per voxel, per fraction, per iteration.")
             self._model.optimize()
             self._model_status = self._model.Status
