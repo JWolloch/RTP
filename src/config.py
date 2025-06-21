@@ -25,7 +25,7 @@ class ProjectionParameters:
 class OptimizationParameters:
     debug: bool = False
     debug_n: int = 1000
-    solution_method: SolutionMethod = SolutionMethod.BARRIER # Run with [Primal-simplex, Primal-dual-simplex, Barrier]
+    solution_method: SolutionMethod = SolutionMethod.CONCURRENT # Run with [Primal-simplex, Primal-dual-simplex, Barrier]
     row_generation: bool = True
     n_most_violated_constraints: int = 1 # Run with [1, 2, 5, 10]
     max_row_generation_iterations: int = 100
