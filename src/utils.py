@@ -213,6 +213,7 @@ def save_run_results(
         json.dump(run_info, f, indent=4)
 
     # Save solution dictionary
+    solution_dict = {k: v.tolist() if isinstance(v, np.ndarray) else v for k, v in solution_dict.items()}
     with open(os.path.join(folder_path, "solution.json"), "w") as f:
         json.dump(solution_dict, f, indent=4)
 

@@ -8,10 +8,12 @@ import numpy as np
 from scipy.sparse import csc_matrix, hstack, eye, diags
 
 import logging
-import io
-from contextlib import redirect_stdout
 
 logger = logging.getLogger(__name__)
+
+class GurobiLogger(gp.Logger):
+    def message(self, msg):
+        logging.getLogger("gurobi").log(29, msg.strip())  # Use custom level 29 ("GUROBI")
 
 
 class Model:
@@ -31,6 +33,8 @@ class Model:
         self._d_bar_F = self._optimization_parameters.d_bar_F # d_bar_F is the maximum fractional radiation dose
 
         self._model = gp.Model()
+        self._model.setLogger(GurobiLogger())
+        self._model.setParam(GRB.Param.OutputFlag, 1)
         self._model.setParam(GRB.Param.DualReductions, 0)
 
         self._x = self.initialize_beamlet_intensity_variables()
@@ -428,7 +432,7 @@ class Model:
         Solves the full model.
         """
         logger.model(f"Solving model...")
-        self._optimize_with_redirect()
+        self._model.optimize()
         self._model_status = self._model.Status
         if self._model_status == GRB.OPTIMAL:
             logger.model("Optimal solution found.")
@@ -776,7 +780,6 @@ class Model:
         Adds the most violated constraints iteratively until all are satisfied.
         """
         logger.model("Starting row generation solver...")
-        #self._model.setParam(GRB.Param.OutputFlag, 0)  # Suppress output
 
         max_iterations = self._optimization_parameters.max_row_generation_iterations
         iteration = 0
@@ -791,7 +794,7 @@ class Model:
         while iteration < max_iterations:
             logger.model(f"--- Row Generation Iteration {iteration + 1} ---")
 
-            self._optimize_with_redirect()
+            self._model.optimize()
             self._model_status = self._model.Status
 
             if self._model_status == GRB.OPTIMAL:
@@ -831,8 +834,7 @@ class Model:
 
         # Final solve to finalize solution
         logger.model("Final solve with all constraints...")
-        self._model.setParam(GRB.Param.OutputFlag, 1)  # Enable output
-        self._optimize_with_redirect()
+        self._model.optimize()
         self._model_status = self._model.Status
 
         if self._model_status == GRB.OPTIMAL:
@@ -873,14 +875,3 @@ class Model:
                 "d_underbar_F": self._d_underbar_F.X,
                 "d_underbar": self._d_underbar.X,
             }
-    
-    def _optimize_with_redirect(self):
-        """
-        Calls self._model.optimize() while capturing stdout and redirecting
-        Gurobi logs to logger.gurobi().
-        """
-        output = io.StringIO()
-        with redirect_stdout(output):
-            self._model.optimize()
-        for line in output.getvalue().splitlines():
-            logger.gurobi(line)
