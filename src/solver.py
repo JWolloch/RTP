@@ -2,7 +2,6 @@ from preprocessor import Preprocessor
 from model import Model
 from config import OptimizationParameters
 from logger_config import configure_logging
-import numpy as np
 import logging
 
 logger = logging.getLogger(__name__)

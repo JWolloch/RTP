@@ -1,10 +1,9 @@
 from scipy.io import loadmat
-from scipy.sparse import csc_matrix, issparse
+from scipy.sparse import csc_matrix, issparse, vstack
 from scipy.sparse.csgraph import shortest_path
 import numpy as np
 from config import GammaParameters
 import logging
-from scipy.sparse import csc_matrix, vstack
 
 logger = logging.getLogger(__name__)
 
