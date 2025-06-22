@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class Preprocessor:
     def __init__(self, filepath: str):
-        self._D, self._phi_hat, self._voxel_positions, self._tumor_voxels, self._H_1_voxels, self._H_2_voxels = utils.load_liver_data_mat(filepath)
+        self._D, self._phi_hat, self._voxel_positions, self._tumor_voxels, self._H_1_voxels, self._H_2_voxels, self._H_3_voxels = utils.load_liver_data_mat(filepath)
         self._voxel_distance_matrix = utils.compute_voxel_distance_matrix(self._voxel_positions)
         self._gamma_matrix = utils.apply_gamma_to_matrix(self._voxel_distance_matrix, GammaParameters)
         self._phi_underbar_0 = utils.compute_phi_underbar_0(self._phi_hat, ProjectionParameters.delta)
@@ -87,6 +87,10 @@ class Preprocessor:
     @property
     def H_2_voxels(self) -> np.ndarray:
         return self._H_2_voxels
+    
+    @property
+    def H_3_voxels(self) -> np.ndarray:
+        return self._H_3_voxels
     
     @property
     def voxel_distance_matrix(self) -> np.ndarray:

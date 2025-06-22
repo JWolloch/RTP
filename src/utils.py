@@ -30,24 +30,26 @@ def load_liver_data_mat(filepath: str) -> tuple[csc_matrix, np.ndarray, csc_matr
     tumor_voxels = V[0].astype(int) - 1  # MATLAB is 1-based; convert to 0-based
     H_1_voxels = V[1].astype(int) - 1
     H_2_voxels = V[2].astype(int) - 1
+    H_3_voxels = V[3].astype(int) - 1
 
     #get dose matrix only for tumor, organ 1 and organ 2 voxels
     D_tumor = D[tumor_voxels]
     D_H_1 = D[H_1_voxels]
     D_H_2 = D[H_2_voxels]
+    D_H_3 = D[H_3_voxels]
 
-
-    D_hat = vstack([D_tumor, D_H_1, D_H_2], format="csc")
+    D_hat = vstack([D_tumor, D_H_1, D_H_2, D_H_3], format="csc")
 
     logger.preprocess("Liver data loaded successfully\n")
 
     logger.preprocess(f"H_1_voxels.shape: {H_1_voxels.shape}")
     logger.preprocess(f"H_2_voxels.shape: {H_2_voxels.shape}")
+    logger.preprocess(f"H_3_voxels.shape: {H_3_voxels.shape}")
     logger.preprocess(f"D_hat.shape (Use only relevant entries from D): {D_hat.shape}")
     logger.preprocess(f"phi_hat.shape: {phi_hat.shape}")
     logger.preprocess(f"voxel_positions.shape: {voxel_positions.shape}")
 
-    return D_hat, phi_hat, voxel_positions, tumor_voxels, H_1_voxels, H_2_voxels
+    return D_hat, phi_hat, voxel_positions, tumor_voxels, H_1_voxels, H_2_voxels, H_3_voxels
 
 def compute_voxel_distance_matrix(adj_matrix: csc_matrix) -> np.ndarray:
     """

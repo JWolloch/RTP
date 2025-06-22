@@ -8,7 +8,7 @@ import numpy as np
 from scipy.sparse import csc_matrix, hstack, eye, diags
 import os
 import logging
-
+import heapq
 
 logger = logging.getLogger(__name__)
 
@@ -24,17 +24,24 @@ class Model:
         self._T = self._preprocessor.phi_hat.shape[0] # T is the number of tumor voxels
         self._H_1 = self._preprocessor.H_1_voxels.shape[0] # H_1 is the number of voxels in organ 1
         self._H_2 = self._preprocessor.H_2_voxels.shape[0] # H_2 is the number of voxels in organ 2
+        self._H_3 = self._preprocessor.H_3_voxels.shape[0] # H_3 is the number of voxels in organ 3
         self._N = self._optimization_parameters.N # N is the number of fractions (this implementation supports only N=2)
         self._mu_F = self._optimization_parameters.mu_F # mu_F - fractional homogeneity parameter
-        self._d_bar_F = self._optimization_parameters.d_bar_F # d_bar_F is the maximum fractional radiation dose
+        self._d_bar_organ_1 = self._optimization_parameters.d_bar_organ_1 # d_bar_organ_1 is the maximum radiation dose for organ 1
+        self._d_bar_organ_2 = self._optimization_parameters.d_bar_organ_2 # d_bar_organ_2 is the maximum radiation dose for organ 2
+        self._d_bar_organ_3 = self._optimization_parameters.d_bar_organ_3 # d_bar_organ_3 is the maximum radiation dose for organ 3
+        self._d_bar_F_organ_1 = self._optimization_parameters.d_bar_F_organ_1 # d_bar_F_organ_1 is the maximum fractional radiation dose for organ 1
+        self._d_bar_F_organ_2 = self._optimization_parameters.d_bar_F_organ_2 # d_bar_F_organ_2 is the maximum fractional radiation dose for organ 2
+        self._d_bar_F_organ_3 = self._optimization_parameters.d_bar_F_organ_3 # d_bar_F_organ_3 is the maximum fractional radiation dose for organ 3
 
+        self._max_constraint_addition = self._optimization_parameters.max_constraint_addition
         self._env = gp.Env(empty=True)
         self._env.setParam(GRB.Param.OutputFlag, 1)
         self._env.start()
 
         # Create model using this environment
         self._model = gp.Model(env=self._env)
-        self._folder_name = f"{self._optimization_parameters.solution_method.name}_{self._optimization_parameters.n_most_violated_constraints}"
+        self._folder_name = f"{self._optimization_parameters.solution_method.name}_{self._optimization_parameters.n_most_violated_constraints}_{self._optimization_parameters.max_constraint_addition}"
         os.makedirs(f"results/mu_F_{self._optimization_parameters.mu_F}/{self._folder_name}", exist_ok=True)
 
         # Write Gurobi logs to file (but NOT to console)
@@ -47,7 +54,7 @@ class Model:
         self._d_underbar_F = self.initialize_minimum_fractional_dose_variable()
         self._d_underbar = self.initialize_minimum_total_dose_variable()
 
-        self._dose_tumor_voxels, self._dose_healthy_voxels_organ_1, self._dose_healthy_voxels_organ_2 = self.initialize_fractional_dose_variables()
+        self._dose_tumor_voxels, self._dose_healthy_voxels_organ_1, self._dose_healthy_voxels_organ_2, self._dose_healthy_voxels_organ_3 = self.initialize_fractional_dose_variables()
 
         self._model_status = None
         self._solver_time = None
@@ -79,13 +86,15 @@ class Model:
             dose_tumor_voxels = self._model.addMVar(shape=(self._N, self._debug_n), lb=0.0, name="fractional_dose_tumor_voxels")
             dose_healthy_voxels_organ_1 = self._model.addMVar(shape=(self._N, self._debug_n), lb=0.0, name="fractional_dose_healthy_voxels_organ_1")
             dose_healthy_voxels_organ_2 = self._model.addMVar(shape=(self._N, self._debug_n), lb=0.0, name="fractional_dose_healthy_voxels_organ_2")
-            logger.model(f"Initialized {self._N}x{self._debug_n} fractional dose auxiliary variables for tumor voxels and {self._N}x{self._debug_n} fractional dose auxiliary variables for healthy voxels in organ 1 and {self._N}x{self._debug_n} fractional dose auxiliary variables for healthy voxels in organ 2")
+            dose_healthy_voxels_organ_3 = self._model.addMVar(shape=(self._N, self._debug_n), lb=0.0, name="fractional_dose_healthy_voxels_organ_3")
+            logger.model(f"Initialized {self._N}x{self._debug_n} fractional dose auxiliary variables for tumor voxels and {self._N}x{self._debug_n} fractional dose auxiliary variables for healthy voxels in organ 1 and {self._N}x{self._debug_n} fractional dose auxiliary variables for healthy voxels in organ 2 and {self._N}x{self._debug_n} fractional dose auxiliary variables for healthy voxels in organ 3")
         else:
             dose_tumor_voxels = self._model.addMVar(shape=(self._N, self._T), lb=0.0, name="fractional_dose_tumor_voxels")
             dose_healthy_voxels_organ_1 = self._model.addMVar(shape=(self._N, self._H_1), lb=0.0, name="fractional_dose_healthy_voxels_organ_1")
             dose_healthy_voxels_organ_2 = self._model.addMVar(shape=(self._N, self._H_2), lb=0.0, name="fractional_dose_healthy_voxels_organ_2")
-        logger.model(f"Initialized {self._N}x{self._T} fractional dose auxiliary variables for tumor voxels and {self._N}x{self._H_1} fractional dose auxiliary variables for healthy voxels in organ 1 and {self._N}x{self._H_2} fractional dose auxiliary variables for healthy voxels in organ 2")
-        return dose_tumor_voxels, dose_healthy_voxels_organ_1, dose_healthy_voxels_organ_2
+            dose_healthy_voxels_organ_3 = self._model.addMVar(shape=(self._N, self._H_3), lb=0.0, name="fractional_dose_healthy_voxels_organ_3")
+            logger.model(f"Initialized {self._N}x{self._T} fractional dose auxiliary variables for tumor voxels and {self._N}x{self._H_1} fractional dose auxiliary variables for healthy voxels in organ 1 and {self._N}x{self._H_2} fractional dose auxiliary variables for healthy voxels in organ 2 and {self._N}x{self._H_3} fractional dose auxiliary variables for healthy voxels in organ 3")
+        return dose_tumor_voxels, dose_healthy_voxels_organ_1, dose_healthy_voxels_organ_2, dose_healthy_voxels_organ_3
     
     def fractional_dose_constraint(self) -> None:
         """
@@ -161,6 +170,30 @@ class Model:
             self._model.addMConstr(A_healthy_organ_2, y_healthy_organ_2_1, GRB.EQUAL, np.zeros(self._H_2), name="fractional_dose_constraint_healthy_organ_2_1")
             self._model.addMConstr(A_healthy_organ_2, y_healthy_organ_2_2, GRB.EQUAL, np.zeros(self._H_2), name="fractional_dose_constraint_healthy_organ_2_2")
     
+        #Now we do the same for healthy voxels in organ 3
+        if self._debug:
+            I_healthy_organ_3 = -1 * eye(self._debug_n)
+            D_healthy_organ_3_sparse = csc_matrix(self._D[self._T + self._H_1 + self._H_2:self._T + self._H_1 + self._H_2 + self._debug_n])
+            blocks = [I_healthy_organ_3, D_healthy_organ_3_sparse]
+        else:
+            I_healthy_organ_3 = -1 * eye(self._H_3)
+            D_healthy_organ_3_sparse = csc_matrix(self._D[self._T + self._H_1 + self._H_2:self._T + self._H_1 + self._H_2 + self._H_3])
+            blocks = [I_healthy_organ_3, D_healthy_organ_3_sparse]
+
+        A_healthy_organ_3 = hstack(blocks, format="csc")
+
+        healthy_organ_3_var_list_1 = self._dose_healthy_voxels_organ_3[0].tolist() + self._x[0].tolist()
+        y_healthy_organ_3_1 = gp.MVar.fromlist(healthy_organ_3_var_list_1)
+        healthy_organ_3_var_list_2 = self._dose_healthy_voxels_organ_3[1].tolist() + self._x[1].tolist()
+        y_healthy_organ_3_2 = gp.MVar.fromlist(healthy_organ_3_var_list_2)
+
+        if self._debug:
+            self._model.addMConstr(A_healthy_organ_3, y_healthy_organ_3_1, GRB.EQUAL, np.zeros(self._debug_n), name="fractional_dose_constraint_healthy_organ_3_1")
+            self._model.addMConstr(A_healthy_organ_3, y_healthy_organ_3_2, GRB.EQUAL, np.zeros(self._debug_n), name="fractional_dose_constraint_healthy_organ_3_2")
+        else:
+            self._model.addMConstr(A_healthy_organ_3, y_healthy_organ_3_1, GRB.EQUAL, np.zeros(self._H_3), name="fractional_dose_constraint_healthy_organ_3_1")
+            self._model.addMConstr(A_healthy_organ_3, y_healthy_organ_3_2, GRB.EQUAL, np.zeros(self._H_3), name="fractional_dose_constraint_healthy_organ_3_2")
+
     def initialize_constraint_3b(self):
         """
         Initializes the constraint 3b.
@@ -357,22 +390,33 @@ class Model:
         y_2 = self._dose_healthy_voxels_organ_1[1]
 
         if self._debug:
-            self._model.addMConstr(A_organ_1, y_1, GRB.LESS_EQUAL, self._optimization_parameters.d_bar_F_organ_1 * np.ones(self._debug_n), name="constraint_3e_1")
-            self._model.addMConstr(A_organ_1, y_2, GRB.LESS_EQUAL, self._optimization_parameters.d_bar_F_organ_1 * np.ones(self._debug_n), name="constraint_3e_2")
+            self._model.addMConstr(A_organ_1, y_1, GRB.LESS_EQUAL, self._d_bar_F_organ_1 * np.ones(self._debug_n), name="constraint_3e_1")
+            self._model.addMConstr(A_organ_1, y_2, GRB.LESS_EQUAL, self._d_bar_F_organ_1 * np.ones(self._debug_n), name="constraint_3e_2")
         else:
-            self._model.addMConstr(A_organ_1, y_1, GRB.LESS_EQUAL, self._optimization_parameters.d_bar_F_organ_1 * np.ones(self._H_1), name="constraint_3e_1")
-            self._model.addMConstr(A_organ_1, y_2, GRB.LESS_EQUAL, self._optimization_parameters.d_bar_F_organ_1 * np.ones(self._H_1), name="constraint_3e_2")
+            self._model.addMConstr(A_organ_1, y_1, GRB.LESS_EQUAL, self._d_bar_F_organ_1 * np.ones(self._H_1), name="constraint_3e_1")
+            self._model.addMConstr(A_organ_1, y_2, GRB.LESS_EQUAL, self._d_bar_F_organ_1 * np.ones(self._H_1), name="constraint_3e_2")
 
         #======== Organ 2 =========
         z_1 = self._dose_healthy_voxels_organ_2[0]
         z_2 = self._dose_healthy_voxels_organ_2[1]
 
         if self._debug:
-            self._model.addMConstr(A_organ_2, z_1, GRB.LESS_EQUAL, self._optimization_parameters.d_bar_F_organ_2 * np.ones(self._debug_n), name="constraint_3e_3")
-            self._model.addMConstr(A_organ_2, z_2, GRB.LESS_EQUAL, self._optimization_parameters.d_bar_F_organ_2 * np.ones(self._debug_n), name="constraint_3e_4")
+            self._model.addMConstr(A_organ_2, z_1, GRB.LESS_EQUAL, self._d_bar_F_organ_2 * np.ones(self._debug_n), name="constraint_3e_3")
+            self._model.addMConstr(A_organ_2, z_2, GRB.LESS_EQUAL, self._d_bar_F_organ_2 * np.ones(self._debug_n), name="constraint_3e_4")
         else:
-            self._model.addMConstr(A_organ_2, z_1, GRB.LESS_EQUAL, self._optimization_parameters.d_bar_F_organ_2 * np.ones(self._H_2), name="constraint_3e_3")
-            self._model.addMConstr(A_organ_2, z_2, GRB.LESS_EQUAL, self._optimization_parameters.d_bar_F_organ_2 * np.ones(self._H_2), name="constraint_3e_4")
+            self._model.addMConstr(A_organ_2, z_1, GRB.LESS_EQUAL, self._d_bar_F_organ_2 * np.ones(self._H_2), name="constraint_3e_3")
+            self._model.addMConstr(A_organ_2, z_2, GRB.LESS_EQUAL, self._d_bar_F_organ_2 * np.ones(self._H_2), name="constraint_3e_4")
+        
+        #======== Organ 3 =========
+        w_1 = self._dose_healthy_voxels_organ_3[0]
+        w_2 = self._dose_healthy_voxels_organ_3[1]
+
+        if self._debug:
+            self._model.addMConstr(A_organ_3, w_1, GRB.LESS_EQUAL, self._d_bar_F_organ_3 * np.ones(self._debug_n), name="constraint_3e_5")
+            self._model.addMConstr(A_organ_3, w_2, GRB.LESS_EQUAL, self._d_bar_F_organ_3 * np.ones(self._debug_n), name="constraint_3e_6")
+        else:
+            self._model.addMConstr(A_organ_3, w_1, GRB.LESS_EQUAL, self._d_bar_F_organ_3 * np.ones(self._H_3), name="constraint_3e_5")
+            self._model.addMConstr(A_organ_3, w_2, GRB.LESS_EQUAL, self._d_bar_F_organ_3 * np.ones(self._H_3), name="constraint_3e_6")
     
     def initialize_constraint_3f(self):
         """
@@ -381,29 +425,38 @@ class Model:
         if self._debug:
             I_organ_1 = eye(self._debug_n)
             I_organ_2 = eye(self._debug_n)
+            I_organ_3 = eye(self._debug_n)
         else:
             I_organ_1 = eye(self._H_1)
             I_organ_2 = eye(self._H_2)
+            I_organ_3 = eye(self._H_3)
 
         A_organ_1 = hstack([I_organ_1, I_organ_1], format="csc")
         A_organ_2 = hstack([I_organ_2, I_organ_2], format="csc")
-
+        A_organ_3 = hstack([I_organ_3, I_organ_3], format="csc")
         #======== Organ 1 =========
         y = self._dose_healthy_voxels_organ_1[0].tolist() + self._dose_healthy_voxels_organ_1[1].tolist()
 
         if self._debug:
-            self._model.addMConstr(A_organ_1, y, GRB.LESS_EQUAL, self._optimization_parameters.d_bar_organ_1 * np.ones(self._debug_n), name="constraint_3f_1")
+            self._model.addMConstr(A_organ_1, y, GRB.LESS_EQUAL, self._d_bar_F_organ_1 * np.ones(self._debug_n), name="constraint_3f_1")
         else:
-            self._model.addMConstr(A_organ_1, y, GRB.LESS_EQUAL, self._optimization_parameters.d_bar_organ_1 * np.ones(self._H_1), name="constraint_3f_1")
+            self._model.addMConstr(A_organ_1, y, GRB.LESS_EQUAL, self._d_bar_F_organ_1 * np.ones(self._H_1), name="constraint_3f_1")
 
         #======== Organ 2 =========
         z = self._dose_healthy_voxels_organ_2[0].tolist() + self._dose_healthy_voxels_organ_2[1].tolist()
 
         if self._debug:
-            self._model.addMConstr(A_organ_2, z, GRB.LESS_EQUAL, self._optimization_parameters.d_bar_organ_2 * np.ones(self._debug_n), name="constraint_3f_2")
+            self._model.addMConstr(A_organ_2, z, GRB.LESS_EQUAL, self._d_bar_F_organ_2 * np.ones(self._debug_n), name="constraint_3f_2")
         else:
-            self._model.addMConstr(A_organ_2, z, GRB.LESS_EQUAL, self._optimization_parameters.d_bar_organ_2 * np.ones(self._H_2), name="constraint_3f_2")
-    
+            self._model.addMConstr(A_organ_2, z, GRB.LESS_EQUAL, self._d_bar_F_organ_2 * np.ones(self._H_2), name="constraint_3f_2")
+
+        #======== Organ 3 =========
+        w = self._dose_healthy_voxels_organ_3[0].tolist() + self._dose_healthy_voxels_organ_3[1].tolist()
+
+        if self._debug:
+            self._model.addMConstr(A_organ_3, w, GRB.LESS_EQUAL, self._d_bar_F_organ_3 * np.ones(self._debug_n), name="constraint_3f_3")
+        else:
+            self._model.addMConstr(A_organ_3, w, GRB.LESS_EQUAL, self._d_bar_F_organ_3 * np.ones(self._H_3), name="constraint_3f_3")
     def initialize_objective(self):
         """
         Initializes the objective.
@@ -478,6 +531,9 @@ class Model:
         Given the current solution, evaluates it and adds the most violated constraints to the model.
         """
         number_of_constraints_added = 0
+        most_violated_constraints_1 = [] #list of tuples (violation_value, voxel_index, constraint_index)
+        most_violated_constraints_2 = [] #list of tuples (violation_value, voxel_index, constraint_index)
+
         if self._debug:
             logger.model(f"Building constraint 3c1 for {self._debug_n} tumor voxels...")
         else:
@@ -513,12 +569,9 @@ class Model:
 
                 v1_new = np.concatenate((v1_old, indices_to_consider_1))
 
-                r_1 = most_violated_indices_1.shape[0]
-
-                if r_1 > 0:
-                    number_of_constraints_added += r_1
-                    self._model.addMConstr(A[most_violated_indices_1], y_1, GRB.LESS_EQUAL, np.zeros(r_1), name=f"constraint_3c1_1_{v}")
-
+                #add most violated indices to most_violated_constraints_1 with their violation values
+                for u in most_violated_indices_1:
+                    most_violated_constraints_1.append((violated_lhs_1[u], v, u))
 
                 #======== Fraction 2 =========
                 indices_to_consider_2 = np.setdiff1d(self._indices, v2_old) #avoiding re-evaluating already added constraints
@@ -545,15 +598,10 @@ class Model:
 
                 v2_new = np.concatenate((v2_old, indices_to_consider_2))
 
-                r_2 = most_violated_indices_2.shape[0]
+                for u in most_violated_indices_2:
+                    most_violated_constraints_2.append((violated_lhs_2[u], v, u))
 
-                if r_2 > 0:
-                    number_of_constraints_added += r_2
-                    self._model.addMConstr(B[most_violated_indices_2], y_2, GRB.LESS_EQUAL, np.zeros(r_2), name=f"constraint_3c1_2_{v}")
-            
-                self._voxels_already_considered_c1[f"{v}"] = (v1_new, v2_new)
-
-            logger.model("Constraint 3c1 completed.")
+            logger.model("Constraint 3c1 fully evaluated.")
 
         else:
 
@@ -587,11 +635,8 @@ class Model:
 
                 v1_new = np.concatenate((v1_old, indices_to_consider_1))
 
-                r_1 = most_violated_indices_1.shape[0]
-
-                if r_1 > 0:
-                    number_of_constraints_added += r_1
-                    self._model.addMConstr(A[most_violated_indices_1], y_1, GRB.LESS_EQUAL, np.zeros(r_1), name=f"constraint_3c1_1_{v}")
+                for u in most_violated_indices_1:
+                    most_violated_constraints_1.append((violated_lhs_1[u], v, u))
 
                 #======== Fraction 2 =========
                 indices_to_consider_2 = np.setdiff1d(self._indices, v2_old) #avoiding re-evaluating already added constraints
@@ -618,23 +663,55 @@ class Model:
 
                 v2_new = np.concatenate((v2_old, indices_to_consider_2))
 
-                r_2 = most_violated_indices_2.shape[0]
-
-                if r_2 > 0:
-                    number_of_constraints_added += r_2
-                    self._model.addMConstr(B[most_violated_indices_2], y_2, GRB.LESS_EQUAL, np.zeros(r_2), name=f"constraint_3c1_2_{v}")
+                for u in most_violated_indices_2:
+                    most_violated_constraints_2.append((violated_lhs_2[u], v, u))
 
                 self._voxels_already_considered_c1[f"{v}"] = (v1_new, v2_new)
 
-            logger.model("Constraint 3c1 completed.")
+            logger.model("Constraint 3c1 fully evaluated.")
+        
+        constraints_to_add_1 = heapq.nlargest(self._optimization_parameters.n_most_violated_constraints, most_violated_constraints_1)
+        if len(constraints_to_add_1) > self._optimization_parameters.max_constraints_to_add:
+            constraints_to_add_1 = constraints_to_add_1[:self._optimization_parameters.max_constraints_to_add]
+        
+        y1 = self._dose_tumor_voxels[0][np.array([triplet[1] for triplet in constraints_to_add_1])]
+        A1 = np.array([self._preprocessor.phi_bar_1[triplet[1]] for triplet in constraints_to_add_1])
+        B1 = np.array([self._mu_F * self._preprocessor.M_3c1_1[triplet[2], triplet[1]] for triplet in constraints_to_add_1])
+        #Turn A1 into column vector and B1 into diagonal matrix
+        A1 = A1.reshape(-1, 1)
+        B1 = diags(B1.flatten())
 
-        return number_of_constraints_added
+        blocks = [A1, B1]
+        A = hstack(blocks, format="csc")
+
+        self._model.addMConstr(A, y1, GRB.LESS_EQUAL, np.zeros(len(constraints_to_add_1)))
+
+        constraints_to_add_2 = heapq.nlargest(self._optimization_parameters.n_most_violated_constraints, most_violated_constraints_2)
+        if len(constraints_to_add_2) > self._optimization_parameters.max_constraints_to_add:
+            constraints_to_add_2 = constraints_to_add_2[:self._optimization_parameters.max_constraints_to_add]
+        
+        y2 = self._dose_tumor_voxels[1][np.array([triplet[1] for triplet in constraints_to_add_2])]
+        A2 = np.array([self._preprocessor.phi_bar_2[triplet[1]] for triplet in constraints_to_add_2])
+        B2 = np.array([self._mu_F * self._preprocessor.M_3c1_2[triplet[2], triplet[1]] for triplet in constraints_to_add_2])
+        #Turn A2 into column vector and B2 into diagonal matrix
+        A2 = A2.reshape(-1, 1)
+        B2 = diags(B2.flatten())
+
+        blocks = [A2, B2]
+        B = hstack(blocks, format="csc")
+
+        self._model.addMConstr(B, y2, GRB.LESS_EQUAL, np.zeros(len(constraints_to_add_2)))
+
+        return len(constraints_to_add_1) + len(constraints_to_add_2)
 
     def evaluate_constraint_3c2(self) -> int:
         """
         Initializes the constraint 3c2.
         """
         number_of_constraints_added = 0
+        most_violated_constraints_1 = [] #list of tuples (violation_value, voxel_index, constraint_index)
+        most_violated_constraints_2 = [] #list of tuples (violation_value, voxel_index, constraint_index)
+        
         if self._debug:
             logger.model(f"Building constraint 3c2 for {self._debug_n} tumor voxels...")
         else:
@@ -669,11 +746,8 @@ class Model:
 
                 v1_new = np.concatenate((v1_old, indices_to_consider_1))
 
-                r_1 = most_violated_indices_1.shape[0]
-
-                if r_1 > 0:
-                    number_of_constraints_added += r_1
-                    self._model.addMConstr(A[most_violated_indices_1], y_1, GRB.LESS_EQUAL, np.zeros(r_1), name=f"constraint_3c2_1_{v}")
+                for u in most_violated_indices_1:
+                    most_violated_constraints_1.append((violated_lhs_1[u], v, u))
 
                 #======== Fraction 2 =========
                 indices_to_consider_2 = np.setdiff1d(self._indices, v2_old) #avoiding re-evaluating already added constraints
@@ -699,11 +773,8 @@ class Model:
 
                 v2_new = np.concatenate((v2_old, indices_to_consider_2))
 
-                r_2 = most_violated_indices_2.shape[0]
-
-                if r_2 > 0:
-                    number_of_constraints_added += r_2
-                    self._model.addMConstr(B[most_violated_indices_2], y_2, GRB.LESS_EQUAL, np.zeros(r_2), name=f"constraint_3c2_2_{v}")
+                for u in most_violated_indices_2:
+                    most_violated_constraints_2.append((violated_lhs_2[u], v, u))
 
                 self._voxels_already_considered_c2[f"{v}"] = (v1_new, v2_new)
 
@@ -738,11 +809,8 @@ class Model:
 
                 v1_new = np.concatenate((v1_old, indices_to_consider_1))
 
-                r_1 = most_violated_indices_1.shape[0]
-
-                if r_1 > 0:
-                    number_of_constraints_added += r_1
-                    self._model.addMConstr(A[most_violated_indices_1], y_1, GRB.LESS_EQUAL, np.zeros(r_1), name=f"constraint_3c2_1_{v}")
+                for u in most_violated_indices_1:
+                    most_violated_constraints_1.append((violated_lhs_1[u], v, u))
 
                 #======== Fraction 2 =========
                 indices_to_consider_2 = np.setdiff1d(self._indices, v2_old) #avoiding re-evaluating already added constraints
@@ -768,17 +836,47 @@ class Model:
 
                 v2_new = np.concatenate((v2_old, indices_to_consider_2))
 
-                r_2 = most_violated_indices_2.shape[0]
-
-                if r_2 > 0:
-                    number_of_constraints_added += r_2
-                    self._model.addMConstr(B[most_violated_indices_2], y_2, GRB.LESS_EQUAL, np.zeros(r_2), name=f"constraint_3c2_2_{v}")
+                for u in most_violated_indices_2:
+                    most_violated_constraints_2.append((violated_lhs_2[u], v, u))
 
                 self._voxels_already_considered_c2[f"{v}"] = (v1_new, v2_new)
 
-            logger.model("Constraint 3c2 completed.")
+            logger.model("Constraint 3c2 fully evaluated.")
+        
+        constraints_to_add_1 = heapq.nlargest(self._optimization_parameters.n_most_violated_constraints, most_violated_constraints_1)
+        if len(constraints_to_add_1) > self._optimization_parameters.max_constraints_to_add:
+            constraints_to_add_1 = constraints_to_add_1[:self._optimization_parameters.max_constraints_to_add]
+        
+        y1 = self._dose_tumor_voxels[0][np.array([triplet[1] for triplet in constraints_to_add_1])]
+        A1 = np.array([self._preprocessor.M_3c2_1[triplet[2], triplet[1]] for triplet in constraints_to_add_1])
+        B1 = np.array([-self._mu_F * self._preprocessor.phi_bar_1[triplet[2]] for triplet in constraints_to_add_1])
 
-        return number_of_constraints_added
+        #Turn A1 into column vector and B1 into diagonal matrix
+        A1 = A1.reshape(-1, 1)
+        B1 = diags(B1.flatten())
+
+        blocks = [A1, B1]
+        A = hstack(blocks, format="csc")
+
+        self._model.addMConstr(A, y1, GRB.LESS_EQUAL, np.zeros(len(constraints_to_add_1)))
+
+        constraints_to_add_2 = heapq.nlargest(self._optimization_parameters.n_most_violated_constraints, most_violated_constraints_2)
+        if len(constraints_to_add_2) > self._optimization_parameters.max_constraints_to_add:
+            constraints_to_add_2 = constraints_to_add_2[:self._optimization_parameters.max_constraints_to_add]
+        
+        y2 = self._dose_tumor_voxels[1][np.array([triplet[1] for triplet in constraints_to_add_2])]
+        A2 = np.array([self._preprocessor.M_3c2_2[triplet[2], triplet[1]] for triplet in constraints_to_add_2])
+        B2 = np.array([-self._mu_F * self._preprocessor.phi_bar_2[triplet[2]] for triplet in constraints_to_add_2])
+        #Turn A2 into column vector and B2 into diagonal matrix
+        A2 = A2.reshape(-1, 1)
+        B2 = diags(B2.flatten())
+
+        blocks = [A2, B2]
+        B = hstack(blocks, format="csc")
+
+        self._model.addMConstr(B, y2, GRB.LESS_EQUAL, np.zeros(len(constraints_to_add_2)))
+
+        return len(constraints_to_add_1) + len(constraints_to_add_2)
     
     def row_generation_model_solver(self) -> None:
         """
@@ -880,9 +978,11 @@ class Model:
                 "tumor_voxels_bio-adjusted_dosages_fraction_1": self._dose_tumor_voxels[0].X,
                 "organ1_voxels_bio-adjusted_dosages_fraction_1": self._dose_healthy_voxels_organ_1[0].X,
                 "organ2_voxels_bio-adjusted_dosages_fraction_1": self._dose_healthy_voxels_organ_2[0].X,
+                "organ3_voxels_bio-adjusted_dosages_fraction_1": self._dose_healthy_voxels_organ_3[0].X,
                 "tumor_voxels_bio-adjusted_dosages_fraction_2": self._dose_tumor_voxels[1].X,
                 "organ1_voxels_bio-adjusted_dosages_fraction_2": self._dose_healthy_voxels_organ_1[1].X,
                 "organ2_voxels_bio-adjusted_dosages_fraction_2": self._dose_healthy_voxels_organ_2[1].X,
+                "organ3_voxels_bio-adjusted_dosages_fraction_2": self._dose_healthy_voxels_organ_3[1].X,
                 "d_underbar_F": self._d_underbar_F.X,
                 "d_underbar": self._d_underbar.X,
             }
