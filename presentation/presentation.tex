@@ -98,7 +98,10 @@ In the robust optimization framework, an \textit{uncertain-LP} is defined as a c
       \[
         \min_{x \in \mathbb{R}^n} \{c^T x : Ax \leq b, \forall (A, b, c) \in \mathcal{U}\}
       \]
+Under this paradigm, we do not persume to know the data's distribution, only the range of possible values.
 What does it mean to solve an uncertain-LP?
+
+
   \end{frame}
   
 
@@ -148,7 +151,7 @@ In 1895, Wilhelm Conrad Röntgen documented his discovery of X-rays, earning him
 \end{frame}
 
 \begin{frame}{Applications of X-rays}
-Today, Röntgen's X-rays are used in a variety of applications, including Radiotherapy.
+Röntgen's discovery laid the foundation for a variety of medical procedures, including both medical imaging and radiotherapy.
 \vspace{0.5em}
   \begin{columns}
     \column{0.5\textwidth}
@@ -186,21 +189,22 @@ Today, Röntgen's X-rays are used in a variety of applications, including Radiot
     \[
     d_{f,v}(\mathbf{x}) = \sum_{i=1}^n \mathbf{D}_{v,i} x_{f,i}
     \]
-    where $\mathbf{D}_{v,i}$ is the influence the $i$-th beamlet has on the voxel $v$.
+    \begin{enumerate}
+        \item $\mathbf{D}_{v,i}$ is the influence the $i$-th beamlet has on the voxel $v$.
+        \item The impact of the \textit{physical dose} depends on biological factors.
+    \end{enumerate}
 
-    However, the impact of the \textit{physical dose} also depends on biological factors, such as the oxygenation level of the voxel.
-
-    This information is modeled via a \textit{radiosensitivity vector} $\Phi \in [0,1]^{N\times T}$.
+    This information is modeled via a \textit{radiosensitivity vector} $\phi \in [0,1]^{N\times T}$.
 
     Accordingly, the \textit{bio-adjusted dose} applied to a voxel $v$ at fraction $f$ is given by:
     \[
     \phi_{f,v} \cdot d_{f,v}(\mathbf{x})
     \]
-    Unfortunately, $\Phi$ is estimated from medical images, that are taken days or weeks before the treatment, and so, we only have an uncertain estimate, $\hat{\Phi}$.
+    Unfortunately, $\phi$ is estimated from medical images, that are taken days or weeks before the treatment, and so, we only have an uncertain estimate, $\hat{\phi}$.
 \end{frame}
 
 \begin{frame}{Optimizing a Radiotherapy Treatment Plan – Nominal Formulation}
-    Taking $\hat{\Phi}$ at face value, we formulate the following LP, which optimizes the radiotherapy treatment plan in accordance with the aforementioned goals:
+    Taking $\hat{\phi}$ at face value, we formulate the following LP, which optimizes the radiotherapy treatment plan in accordance with the aforementioned goals:
     \small{
     \begin{align}
         \max_{\mathbf{x} \in \mathbb{R}_+^{N \times n},\; \underline{d} \in \mathbb{R},\; \underline{d}^F \in \mathbb{R}} \quad & \underline{d} + \lambda \underline{d}^F \tag{1.a} \\
@@ -219,13 +223,13 @@ Today, Röntgen's X-rays are used in a variety of applications, including Radiot
     \end{frame}
 
 \begin{frame}{Optimizing a Radiotherapy Treatment Plan – Uncertainty Set}
-        Here we apply the robust optimization methodology by assuming that the values of $\bm{\Phi}$ are members of the following uncertainty set, henceforth referred to as the \textit{spatially and temporally bound uncertainty set}:
+        Here we apply the robust optimization methodology by assuming that the values of $\bm{\phi}$ are members of the following uncertainty set, henceforth referred to as the \textit{spatially and temporally bound uncertainty set}:
         \vspace{0.5em}
         \small{
         \[
         \stb =
         \left\{
-        \bm{\Phi} \in [0, 1]^{N \times |T|} \;\middle|\;
+        \bm{\phi} \in [0, 1]^{N \times |T|} \;\middle|\;
         \begin{array}{ll}
         |\phi_{1v} - \hat{\phi}_{1v}| \leq \delta, & \forall v \in T \\
         |\phi_{fv} - \phi_{fu}| \leq \gamma_{vu}, & \forall f \in [N],\, v, u \in T \\
@@ -248,10 +252,10 @@ Today, Röntgen's X-rays are used in a variety of applications, including Radiot
         \max_{\mathbf{x} \in \mathbb{R}_+^{N \times n},\; \underline{d} \in \mathbb{R},\; \underline{d}^F \in \mathbb{R}} \quad 
         & \underline{d} + \lambda \underline{d}^F \tag{2.a} \\
         \text{subject to} \quad 
-        & \min_{\bm{\Phi} \in \stb} \left\{ \phi_{fv} d_{fv}(\mathbf{x}) \right\} \ge \underline{d}^F, && v \in T,\; f \in [N] \tag{2.b} \label{2.b} \\
-        & \max_{\bm{\Phi} \in \stb} \left\{ \phi_{fv} d_{fv}(\mathbf{x}) - \mu \phi_{fu} d_{fu}(\mathbf{x}) \right\} \le 0, && v,u \in T,\; f \in [N] \tag{2.c} \label{2.c} \\
-        & \min_{\bm{\Phi} \in \stb} \left\{ \sum_{f \in [N]} \phi_{fv} d_{fv}(\mathbf{x}) \right\} \ge \underline{d}, && v \in T \tag{2.d} \label{2.d} \\
-        & \max_{\bm{\Phi} \in \stb} \left\{ \sum_{f \in [N]} \phi_{fv} d_{fv}(\mathbf{x}) - \mu \sum_{f \in [N]} \phi_{fu} d_{fu}(\mathbf{x}) \right\} \le 0, && v,u \in T \tag{2.e} \label{2.e} \\
+        & \min_{\bm{\phi} \in \stb} \left\{ \phi_{fv} d_{fv}(\mathbf{x}) \right\} \ge \underline{d}^F, && v \in T,\; f \in [N] \tag{2.b} \label{2.b} \\
+        & \max_{\bm{\phi} \in \stb} \left\{ \phi_{fv} d_{fv}(\mathbf{x}) - \mu \phi_{fu} d_{fu}(\mathbf{x}) \right\} \le 0, && v,u \in T,\; f \in [N] \tag{2.c} \label{2.c} \\
+        & \min_{\bm{\phi} \in \stb} \left\{ \sum_{f \in [N]} \phi_{fv} d_{fv}(\mathbf{x}) \right\} \ge \underline{d}, && v \in T \tag{2.d} \label{2.d} \\
+        & \max_{\bm{\phi} \in \stb} \left\{ \sum_{f \in [N]} \phi_{fv} d_{fv}(\mathbf{x}) - \mu \sum_{f \in [N]} \phi_{fu} d_{fu}(\mathbf{x}) \right\} \le 0, && v,u \in T \tag{2.e} \label{2.e} \\
         & d_{fv}(\mathbf{x}) \le \bar{d}_k^F, && f \in [N],\; k \in [K],\; v \in H_k \tag{2.f} \\
         & \sum_{f \in [2]} d_{fv}(\mathbf{x}) \le \bar{d}_k, && k \in [K],\; v \in H_k \tag{2.g} \label{2.g}
     \end{align}}
