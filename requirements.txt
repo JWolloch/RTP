@@ -1,0 +1,6 @@
+numpy
+pandas
+gurobipy
+tabulate
+psutils
+json

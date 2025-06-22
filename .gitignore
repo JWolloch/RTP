@@ -1,0 +1,57 @@
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Temp files
+*.tmp
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE and editor files
+.vscode/
+.idea/
+
+# Virtual environments (if local)
+.venv/
+env/
+venv/
+
+*.ilp
+*.lp
+*.mps
+*.sol
+*.log
+
+# Presentation
+presentation/presentation.out
+presentation/presentation.snm
+presentation/presentation.toc
+presentation/presentation.vrb
+presentation/presentation.synctex.gz
+presentation/presentation.synctex(busy)
+presentation/presentation.fls
+presentation/presentation.fdb_latexmk
+presentation/presentation.bbl
+presentation/presentation.bbl-SAVE-ERROR
+presentation/presentation.blg
+presentation/presentation.bcf
+presentation/presentation.run.xml
+presentation/presentation.aux
+presentation/presentation.nav
+
+optimization-experiments/
+python_build/
+python311
+.vim
+.cursor-server
+.cursor
+.bash_history
+.bash_profile
+.bash_logout
+.bashrc
+.gitconfig
