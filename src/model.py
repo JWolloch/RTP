@@ -573,7 +573,8 @@ class Model:
 
                 #add most violated indices to most_violated_constraints_1 with their violation values
                 for u in most_violated_indices_1:
-                    most_violated_constraints_1.append((violated_lhs_1[u], v, u))
+                    violation = constraint_lhs_1[u]
+                    most_violated_constraints_1.append((violation, v, u))
 
                 #======== Fraction 2 =========
                 indices_to_consider_2 = np.setdiff1d(self._indices, v2_old) #avoiding re-evaluating already added constraints
@@ -601,7 +602,8 @@ class Model:
                 v2_new = np.concatenate((v2_old, indices_to_consider_2))
 
                 for u in most_violated_indices_2:
-                    most_violated_constraints_2.append((violated_lhs_2[u], v, u))
+                    violation = constraint_lhs_2[u]
+                    most_violated_constraints_2.append((violation, v, u))
 
             logger.model("Constraint 3c1 fully evaluated.")
 
@@ -638,7 +640,8 @@ class Model:
                 v1_new = np.concatenate((v1_old, indices_to_consider_1))
 
                 for u in most_violated_indices_1:
-                    most_violated_constraints_1.append((violated_lhs_1[u], v, u))
+                    violation = constraint_lhs_1[u]
+                    most_violated_constraints_1.append((violation, v, u))
 
                 #======== Fraction 2 =========
                 indices_to_consider_2 = np.setdiff1d(self._indices, v2_old) #avoiding re-evaluating already added constraints
@@ -666,7 +669,8 @@ class Model:
                 v2_new = np.concatenate((v2_old, indices_to_consider_2))
 
                 for u in most_violated_indices_2:
-                    most_violated_constraints_2.append((violated_lhs_2[u], v, u))
+                    violation = constraint_lhs_2[u]
+                    most_violated_constraints_2.append((violation, v, u))
 
                 self._voxels_already_considered_c1[f"{v}"] = (v1_new, v2_new)
 
@@ -749,7 +753,8 @@ class Model:
                 v1_new = np.concatenate((v1_old, indices_to_consider_1))
 
                 for u in most_violated_indices_1:
-                    most_violated_constraints_1.append((violated_lhs_1[u], v, u))
+                    violation = constraint_lhs_1[u]
+                    most_violated_constraints_1.append((violation, v, u))
 
                 #======== Fraction 2 =========
                 indices_to_consider_2 = np.setdiff1d(self._indices, v2_old) #avoiding re-evaluating already added constraints
@@ -776,7 +781,8 @@ class Model:
                 v2_new = np.concatenate((v2_old, indices_to_consider_2))
 
                 for u in most_violated_indices_2:
-                    most_violated_constraints_2.append((violated_lhs_2[u], v, u))
+                    violation = constraint_lhs_2[u]
+                    most_violated_constraints_2.append((violation, v, u))
 
                 self._voxels_already_considered_c2[f"{v}"] = (v1_new, v2_new)
 
@@ -812,7 +818,8 @@ class Model:
                 v1_new = np.concatenate((v1_old, indices_to_consider_1))
 
                 for u in most_violated_indices_1:
-                    most_violated_constraints_1.append((violated_lhs_1[u], v, u))
+                    violation = constraint_lhs_1[u]
+                    most_violated_constraints_1.append((violation, v, u))
 
                 #======== Fraction 2 =========
                 indices_to_consider_2 = np.setdiff1d(self._indices, v2_old) #avoiding re-evaluating already added constraints
@@ -839,7 +846,8 @@ class Model:
                 v2_new = np.concatenate((v2_old, indices_to_consider_2))
 
                 for u in most_violated_indices_2:
-                    most_violated_constraints_2.append((violated_lhs_2[u], v, u))
+                    violation = constraint_lhs_2[u]
+                    most_violated_constraints_2.append((violation, v, u))
 
                 self._voxels_already_considered_c2[f"{v}"] = (v1_new, v2_new)
 

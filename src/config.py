@@ -23,8 +23,8 @@ class ProjectionParameters:
 
 @dataclass
 class OptimizationParameters:
-    debug: bool = False
-    debug_n: int = 1000
+    debug: bool = True
+    debug_n: int = 500
     solution_method: SolutionMethod = SolutionMethod.PRIMAL_DUAL_SIMPLEX # Run with [Primal-simplex, Primal-dual-simplex, Barrier] barrier if it takes too long
     row_generation: bool = True
     n_most_violated_constraints: int = 5 # Run with [5, 10] priority 2
