@@ -33,6 +33,7 @@ class Model:
         self._d_bar_F_organ_1 = self._optimization_parameters.d_bar_F_organ_1 # d_bar_F_organ_1 is the maximum fractional radiation dose for organ 1
         self._d_bar_F_organ_2 = self._optimization_parameters.d_bar_F_organ_2 # d_bar_F_organ_2 is the maximum fractional radiation dose for organ 2
         self._d_bar_F_organ_3 = self._optimization_parameters.d_bar_F_organ_3 # d_bar_F_organ_3 is the maximum fractional radiation dose for organ 3
+        self._eps = self._optimization_parameters.eps # eps is the tolerance for the fractional dose constraints
 
         self._max_constraint_addition = self._optimization_parameters.max_constraint_addition
         self._env = gp.Env(empty=True)
@@ -42,10 +43,10 @@ class Model:
         # Create model using this environment
         self._model = gp.Model(env=self._env)
         self._folder_name = f"{self._optimization_parameters.solution_method.name}_{self._optimization_parameters.n_most_violated_constraints}_{self._optimization_parameters.max_constraint_addition}"
-        os.makedirs(f"results/mu_F_{self._optimization_parameters.mu_F}/{self._folder_name}", exist_ok=True)
+        os.makedirs(f"final_results/mu_F_{self._optimization_parameters.mu_F}/{self._folder_name}", exist_ok=True)
 
         # Write Gurobi logs to file (but NOT to console)
-        self._model.setParam(GRB.Param.LogFile, f"results/mu_F_{self._optimization_parameters.mu_F}/{self._folder_name}/gurobi.log")
+        self._model.setParam(GRB.Param.LogFile, f"final_results/mu_F_{self._optimization_parameters.mu_F}/{self._folder_name}/gurobi.log")
         self._model.setParam(GRB.Param.DualReductions, 0)
         self._model.setParam(GRB.Param.Method, self._optimization_parameters.solution_method.value)
 
@@ -533,9 +534,6 @@ class Model:
         Given the current solution, evaluates it and adds the most violated constraints to the model.
         """
         number_of_constraints_added = 0
-        most_violated_constraints_1 = [] #list of tuples (violation_value, voxel_index, constraint_index)
-        most_violated_constraints_2 = [] #list of tuples (violation_value, voxel_index, constraint_index)
-
         if self._debug:
             logger.model(f"Building constraint 3c1 for {self._debug_n} tumor voxels...")
         else:
@@ -543,7 +541,8 @@ class Model:
         
         if self._debug:
             for v in range(self._debug_n):
-                logger.model(f"Constraint 3c1 progress: {v}/{self._debug_n} voxels processed")
+                if v % 500 == 0:
+                    logger.model(f"Constraint 3c1 progress: {v}/{self._debug_n} voxels processed")
                 v1_old, v2_old = self._voxels_already_considered_c1[f"{v}"]
                 #======== Fraction 1 =========
                 indices_to_consider_1 = np.setdiff1d(self._indices, v1_old) #avoiding re-evaluating already added constraints
@@ -561,7 +560,7 @@ class Model:
 
                 constraint_lhs_1 = (A @ y_1_value).flatten() #constraint lhs
 
-                mask_1 = constraint_lhs_1 > 0 #mask of positive constraint lhs
+                mask_1 = constraint_lhs_1 > self._eps #mask of positive constraint lhs
                 violated_indices_1 = np.where(mask_1)[0]
                 violated_lhs_1 = constraint_lhs_1[violated_indices_1]
 
@@ -569,12 +568,14 @@ class Model:
                 top_l_indices_1 = np.argsort(violated_lhs_1)[-l_1:]
                 most_violated_indices_1 = violated_indices_1[top_l_indices_1]
 
-                v1_new = np.concatenate((v1_old, indices_to_consider_1))
+                v1_new = np.concatenate((v1_old, most_violated_indices_1))
 
-                #add most violated indices to most_violated_constraints_1 with their violation values
-                for u in most_violated_indices_1:
-                    violation = constraint_lhs_1[u]
-                    most_violated_constraints_1.append((violation, v, u))
+                r_1 = most_violated_indices_1.shape[0]
+
+                if r_1 > 0:
+                    number_of_constraints_added += r_1
+                    self._model.addMConstr(A[most_violated_indices_1], y_1, GRB.LESS_EQUAL, np.zeros(r_1), name=f"constraint_3c1_1_{v}")
+
 
                 #======== Fraction 2 =========
                 indices_to_consider_2 = np.setdiff1d(self._indices, v2_old) #avoiding re-evaluating already added constraints
@@ -591,7 +592,7 @@ class Model:
 
                 constraint_lhs_2 = (B @ y_2_value).flatten() #constraint lhs
 
-                mask_2 = constraint_lhs_2 > 0 #mask of positive constraint lhs
+                mask_2 = constraint_lhs_2 > self._eps #mask of positive constraint lhs
                 violated_indices_2 = np.where(mask_2)[0]
                 violated_lhs_2 = constraint_lhs_2[violated_indices_2]
 
@@ -599,13 +600,17 @@ class Model:
                 top_l_indices_2 = np.argsort(violated_lhs_2)[-l_2:]
                 most_violated_indices_2 = violated_indices_2[top_l_indices_2]
 
-                v2_new = np.concatenate((v2_old, indices_to_consider_2))
+                v2_new = np.concatenate((v2_old, most_violated_indices_2))
 
-                for u in most_violated_indices_2:
-                    violation = constraint_lhs_2[u]
-                    most_violated_constraints_2.append((violation, v, u))
+                r_2 = most_violated_indices_2.shape[0]
 
-            logger.model("Constraint 3c1 fully evaluated.")
+                if r_2 > 0:
+                    number_of_constraints_added += r_2
+                    self._model.addMConstr(B[most_violated_indices_2], y_2, GRB.LESS_EQUAL, np.zeros(r_2), name=f"constraint_3c1_2_{v}")
+            
+                self._voxels_already_considered_c1[f"{v}"] = (v1_new, v2_new)
+
+            logger.model("Constraint 3c1 completed.")
 
         else:
 
@@ -629,7 +634,7 @@ class Model:
 
                 constraint_lhs_1 = (A @ y_1_value).flatten() #constraint lhs
 
-                mask_1 = constraint_lhs_1 > 0 #mask of positive constraint lhs
+                mask_1 = constraint_lhs_1 > self._eps #mask of positive constraint lhs
                 violated_indices_1 = np.where(mask_1)[0]
                 violated_lhs_1 = constraint_lhs_1[violated_indices_1]
 
@@ -637,11 +642,13 @@ class Model:
                 top_l_indices_1 = np.argsort(violated_lhs_1)[-l_1:]
                 most_violated_indices_1 = violated_indices_1[top_l_indices_1]
 
-                v1_new = np.concatenate((v1_old, indices_to_consider_1))
+                v1_new = np.concatenate((v1_old, most_violated_indices_1))
 
-                for u in most_violated_indices_1:
-                    violation = constraint_lhs_1[u]
-                    most_violated_constraints_1.append((violation, v, u))
+                r_1 = most_violated_indices_1.shape[0]
+
+                if r_1 > 0:
+                    number_of_constraints_added += r_1
+                    self._model.addMConstr(A[most_violated_indices_1], y_1, GRB.LESS_EQUAL, np.zeros(r_1), name=f"constraint_3c1_1_{v}")
 
                 #======== Fraction 2 =========
                 indices_to_consider_2 = np.setdiff1d(self._indices, v2_old) #avoiding re-evaluating already added constraints
@@ -658,7 +665,7 @@ class Model:
 
                 constraint_lhs_2 = (B @ y_2_value).flatten() #constraint lhs
 
-                mask_2 = constraint_lhs_2 > 0 #mask of positive constraint lhs
+                mask_2 = constraint_lhs_2 > self._eps #mask of positive constraint lhs
                 violated_indices_2 = np.where(mask_2)[0]
                 violated_lhs_2 = constraint_lhs_2[violated_indices_2]
 
@@ -666,58 +673,25 @@ class Model:
                 top_l_indices_2 = np.argsort(violated_lhs_2)[-l_2:]
                 most_violated_indices_2 = violated_indices_2[top_l_indices_2]
 
-                v2_new = np.concatenate((v2_old, indices_to_consider_2))
+                v2_new = np.concatenate((v2_old, most_violated_indices_2))
 
-                for u in most_violated_indices_2:
-                    violation = constraint_lhs_2[u]
-                    most_violated_constraints_2.append((violation, v, u))
+                r_2 = most_violated_indices_2.shape[0]
+
+                if r_2 > 0:
+                    number_of_constraints_added += r_2
+                    self._model.addMConstr(B[most_violated_indices_2], y_2, GRB.LESS_EQUAL, np.zeros(r_2), name=f"constraint_3c1_2_{v}")
 
                 self._voxels_already_considered_c1[f"{v}"] = (v1_new, v2_new)
 
-            logger.model("Constraint 3c1 fully evaluated.")
-        
-        constraints_to_add_1 = heapq.nlargest(self._optimization_parameters.n_most_violated_constraints, most_violated_constraints_1)
-        if len(constraints_to_add_1) > self._optimization_parameters.max_constraint_addition:
-            constraints_to_add_1 = constraints_to_add_1[:self._optimization_parameters.max_constraint_addition]
-        
-        y1 = self._dose_tumor_voxels[0][np.array([triplet[1] for triplet in constraints_to_add_1])]
-        A1 = np.array([self._preprocessor.phi_bar_1[triplet[1]] for triplet in constraints_to_add_1])
-        B1 = np.array([self._mu_F * self._preprocessor.M_3c1_1[triplet[2], triplet[1]] for triplet in constraints_to_add_1])
-        #Turn A1 into column vector and B1 into diagonal matrix
-        A1 = A1.reshape(-1, 1)
-        B1 = diags(B1.flatten())
+            logger.model("Constraint 3c1 completed.")
 
-        blocks = [A1, B1]
-        A = hstack(blocks, format="csc")
-
-        self._model.addMConstr(A, y1, GRB.LESS_EQUAL, np.zeros(len(constraints_to_add_1)))
-
-        constraints_to_add_2 = heapq.nlargest(self._optimization_parameters.n_most_violated_constraints, most_violated_constraints_2)
-        if len(constraints_to_add_2) > self._optimization_parameters.max_constraint_addition:
-            constraints_to_add_2 = constraints_to_add_2[:self._optimization_parameters.max_constraint_addition]
-        
-        y2 = self._dose_tumor_voxels[1][np.array([triplet[1] for triplet in constraints_to_add_2])]
-        A2 = np.array([self._preprocessor.phi_bar_2[triplet[1]] for triplet in constraints_to_add_2])
-        B2 = np.array([self._mu_F * self._preprocessor.M_3c1_2[triplet[2], triplet[1]] for triplet in constraints_to_add_2])
-        #Turn A2 into column vector and B2 into diagonal matrix
-        A2 = A2.reshape(-1, 1)
-        B2 = diags(B2.flatten())
-
-        blocks = [A2, B2]
-        B = hstack(blocks, format="csc")
-
-        self._model.addMConstr(B, y2, GRB.LESS_EQUAL, np.zeros(len(constraints_to_add_2)))
-
-        return len(constraints_to_add_1) + len(constraints_to_add_2)
+        return number_of_constraints_added
 
     def evaluate_constraint_3c2(self) -> int:
         """
         Initializes the constraint 3c2.
         """
         number_of_constraints_added = 0
-        most_violated_constraints_1 = [] #list of tuples (violation_value, voxel_index, constraint_index)
-        most_violated_constraints_2 = [] #list of tuples (violation_value, voxel_index, constraint_index)
-        
         if self._debug:
             logger.model(f"Building constraint 3c2 for {self._debug_n} tumor voxels...")
         else:
@@ -725,7 +699,8 @@ class Model:
 
         if self._debug:
             for v in range(self._debug_n):
-                logger.model(f"Constraint 3c2 progress: {v}/{self._debug_n} voxels processed")
+                if v % 500 == 0:
+                    logger.model(f"Constraint 3c2 progress: {v}/{self._debug_n} voxels processed")
                 v1_old, v2_old = self._voxels_already_considered_c2[f"{v}"]
 
                 #======== Fraction 1 =========
@@ -742,7 +717,7 @@ class Model:
 
                 constraint_lhs_1 = (A @ y_1_value).flatten() #constraint lhs
 
-                mask_1 = constraint_lhs_1 > 0 #mask of positive constraint lhs
+                mask_1 = constraint_lhs_1 > self._eps #mask of positive constraint lhs
                 violated_indices_1 = np.where(mask_1)[0]
                 violated_lhs_1 = constraint_lhs_1[violated_indices_1]
 
@@ -750,11 +725,13 @@ class Model:
                 top_l_indices_1 = np.argsort(violated_lhs_1)[-l_1:]
                 most_violated_indices_1 = violated_indices_1[top_l_indices_1]
 
-                v1_new = np.concatenate((v1_old, indices_to_consider_1))
+                v1_new = np.concatenate((v1_old, most_violated_indices_1))
 
-                for u in most_violated_indices_1:
-                    violation = constraint_lhs_1[u]
-                    most_violated_constraints_1.append((violation, v, u))
+                r_1 = most_violated_indices_1.shape[0]
+
+                if r_1 > 0:
+                    number_of_constraints_added += r_1
+                    self._model.addMConstr(A[most_violated_indices_1], y_1, GRB.LESS_EQUAL, np.zeros(r_1), name=f"constraint_3c2_1_{v}")
 
                 #======== Fraction 2 =========
                 indices_to_consider_2 = np.setdiff1d(self._indices, v2_old) #avoiding re-evaluating already added constraints
@@ -770,7 +747,7 @@ class Model:
 
                 constraint_lhs_2 = (B @ y_2_value).flatten() #constraint lhs
 
-                mask_2 = constraint_lhs_2 > 0 #mask of positive constraint lhs
+                mask_2 = constraint_lhs_2 > self._eps #mask of positive constraint lhs
                 violated_indices_2 = np.where(mask_2)[0]
                 violated_lhs_2 = constraint_lhs_2[violated_indices_2]
 
@@ -778,11 +755,13 @@ class Model:
                 top_l_indices_2 = np.argsort(violated_lhs_2)[-l_2:]
                 most_violated_indices_2 = violated_indices_2[top_l_indices_2]
 
-                v2_new = np.concatenate((v2_old, indices_to_consider_2))
+                v2_new = np.concatenate((v2_old, most_violated_indices_2))
 
-                for u in most_violated_indices_2:
-                    violation = constraint_lhs_2[u]
-                    most_violated_constraints_2.append((violation, v, u))
+                r_2 = most_violated_indices_2.shape[0]
+
+                if r_2 > 0:
+                    number_of_constraints_added += r_2
+                    self._model.addMConstr(B[most_violated_indices_2], y_2, GRB.LESS_EQUAL, np.zeros(r_2), name=f"constraint_3c2_2_{v}")
 
                 self._voxels_already_considered_c2[f"{v}"] = (v1_new, v2_new)
 
@@ -807,7 +786,7 @@ class Model:
 
                 constraint_lhs_1 = (A @ y_1_value).flatten() #constraint lhs
 
-                mask_1 = constraint_lhs_1 > 0 #mask of positive constraint lhs
+                mask_1 = constraint_lhs_1 > self._eps #mask of positive constraint lhs
                 violated_indices_1 = np.where(mask_1)[0]
                 violated_lhs_1 = constraint_lhs_1[violated_indices_1]
 
@@ -815,11 +794,13 @@ class Model:
                 top_l_indices_1 = np.argsort(violated_lhs_1)[-l_1:]
                 most_violated_indices_1 = violated_indices_1[top_l_indices_1]
 
-                v1_new = np.concatenate((v1_old, indices_to_consider_1))
+                v1_new = np.concatenate((v1_old, most_violated_indices_1))
 
-                for u in most_violated_indices_1:
-                    violation = constraint_lhs_1[u]
-                    most_violated_constraints_1.append((violation, v, u))
+                r_1 = most_violated_indices_1.shape[0]
+
+                if r_1 > 0:
+                    number_of_constraints_added += r_1
+                    self._model.addMConstr(A[most_violated_indices_1], y_1, GRB.LESS_EQUAL, np.zeros(r_1), name=f"constraint_3c2_1_{v}")
 
                 #======== Fraction 2 =========
                 indices_to_consider_2 = np.setdiff1d(self._indices, v2_old) #avoiding re-evaluating already added constraints
@@ -835,7 +816,7 @@ class Model:
 
                 constraint_lhs_2 = (B @ y_2_value).flatten() #constraint lhs
 
-                mask_2 = constraint_lhs_2 > 0 #mask of positive constraint lhs
+                mask_2 = constraint_lhs_2 > self._eps #mask of positive constraint lhs
                 violated_indices_2 = np.where(mask_2)[0]
                 violated_lhs_2 = constraint_lhs_2[violated_indices_2]
 
@@ -843,50 +824,19 @@ class Model:
                 top_l_indices_2 = np.argsort(violated_lhs_2)[-l_2:]
                 most_violated_indices_2 = violated_indices_2[top_l_indices_2]
 
-                v2_new = np.concatenate((v2_old, indices_to_consider_2))
+                v2_new = np.concatenate((v2_old, most_violated_indices_2))
 
-                for u in most_violated_indices_2:
-                    violation = constraint_lhs_2[u]
-                    most_violated_constraints_2.append((violation, v, u))
+                r_2 = most_violated_indices_2.shape[0]
+
+                if r_2 > 0:
+                    number_of_constraints_added += r_2
+                    self._model.addMConstr(B[most_violated_indices_2], y_2, GRB.LESS_EQUAL, np.zeros(r_2), name=f"constraint_3c2_2_{v}")
 
                 self._voxels_already_considered_c2[f"{v}"] = (v1_new, v2_new)
 
-            logger.model("Constraint 3c2 fully evaluated.")
-        
-        constraints_to_add_1 = heapq.nlargest(self._optimization_parameters.n_most_violated_constraints, most_violated_constraints_1)
-        if len(constraints_to_add_1) > self._optimization_parameters.max_constraint_addition:
-            constraints_to_add_1 = constraints_to_add_1[:self._optimization_parameters.max_constraint_addition]
-        
-        y1 = self._dose_tumor_voxels[0][np.array([triplet[1] for triplet in constraints_to_add_1])]
-        A1 = np.array([self._preprocessor.M_3c2_1[triplet[2], triplet[1]] for triplet in constraints_to_add_1])
-        B1 = np.array([-self._mu_F * self._preprocessor.phi_bar_1[triplet[2]] for triplet in constraints_to_add_1])
+            logger.model("Constraint 3c2 completed.")
 
-        #Turn A1 into column vector and B1 into diagonal matrix
-        A1 = A1.reshape(-1, 1)
-        B1 = diags(B1.flatten())
-
-        blocks = [A1, B1]
-        A = hstack(blocks, format="csc")
-
-        self._model.addMConstr(A, y1, GRB.LESS_EQUAL, np.zeros(len(constraints_to_add_1)))
-
-        constraints_to_add_2 = heapq.nlargest(self._optimization_parameters.n_most_violated_constraints, most_violated_constraints_2)
-        if len(constraints_to_add_2) > self._optimization_parameters.max_constraint_addition:
-            constraints_to_add_2 = constraints_to_add_2[:self._optimization_parameters.max_constraint_addition]
-        
-        y2 = self._dose_tumor_voxels[1][np.array([triplet[1] for triplet in constraints_to_add_2])]
-        A2 = np.array([self._preprocessor.M_3c2_2[triplet[2], triplet[1]] for triplet in constraints_to_add_2])
-        B2 = np.array([-self._mu_F * self._preprocessor.phi_bar_2[triplet[2]] for triplet in constraints_to_add_2])
-        #Turn A2 into column vector and B2 into diagonal matrix
-        A2 = A2.reshape(-1, 1)
-        B2 = diags(B2.flatten())
-
-        blocks = [A2, B2]
-        B = hstack(blocks, format="csc")
-
-        self._model.addMConstr(B, y2, GRB.LESS_EQUAL, np.zeros(len(constraints_to_add_2)))
-
-        return len(constraints_to_add_1) + len(constraints_to_add_2)
+        return number_of_constraints_added
     
     def row_generation_model_solver(self) -> None:
         """
@@ -945,6 +895,8 @@ class Model:
 
             # Stop if no new constraints were added
             if added_this_iter == 0:
+                logger.model(f"Number of voxels already considered: {len(self._voxels_already_considered_c1)}")
+                logger.model(f"Number of voxels already considered: {len(self._voxels_already_considered_c2)}")
                 found_feasible_solution = True
                 logger.model("No more violated constraints found. Terminating row generation.")
                 break
@@ -959,16 +911,17 @@ class Model:
         if self._model_status == GRB.OPTIMAL:
             logger.model("Row generation: Optimal solution found.")
             if self._debug:
-                self._model.write(f"results/mu_F_{self._optimization_parameters.mu_F}/{self._folder_name}/debug_rowgen_model.sol")
+                self._model.write(f"final_results/mu_F_{self._optimization_parameters.mu_F}/{self._folder_name}/debug_rowgen_model.sol")
+                self._model.write(f"final_results/mu_F_{self._optimization_parameters.mu_F}/{self._folder_name}/debug_rowgen_model.lp")
             else:
-                self._model.write(f"results/mu_F_{self._optimization_parameters.mu_F}/{self._folder_name}/rowgen_model.sol")
+                self._model.write(f"final_results/mu_F_{self._optimization_parameters.mu_F}/{self._folder_name}/rowgen_model.sol")
         elif self._model_status == GRB.INFEASIBLE:
             logger.model("Row generation model is infeasible. Computing IIS...")
             self._model.computeIIS()
             if self._debug:
-                self._model.write(f"results/mu_F_{self._optimization_parameters.mu_F}/{self._folder_name}/debug_rowgen_model.ilp")
+                self._model.write(f"final_results/mu_F_{self._optimization_parameters.mu_F}/{self._folder_name}/debug_rowgen_model.ilp")
             else:
-                self._model.write(f"results/mu_F_{self._optimization_parameters.mu_F}/{self._folder_name}/rowgen_model.ilp")
+                self._model.write(f"final_results/mu_F_{self._optimization_parameters.mu_F}/{self._folder_name}/rowgen_model.ilp")
         else:
             logger.model(f"Solver ended with status code: {self._model_status}")
 

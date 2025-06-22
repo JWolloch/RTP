@@ -19,16 +19,15 @@ class GammaParameters:
 class ProjectionParameters:
     delta: float = 0.05
     sigma: float = 0.05
-    eps: float = 1e-6
 
 @dataclass
 class OptimizationParameters:
-    debug: bool = True
-    debug_n: int = 500
+    debug: bool = False
+    debug_n: int = 2000
     solution_method: SolutionMethod = SolutionMethod.PRIMAL_DUAL_SIMPLEX # Run with [Primal-simplex, Primal-dual-simplex, Barrier] barrier if it takes too long
     row_generation: bool = True
-    n_most_violated_constraints: int = 5 # Run with [5, 10] priority 2
-    max_constraint_addition: int = np.inf #or 2000 priority 1
+    n_most_violated_constraints: int = 10 # Run with [5, 10] priority 2
+    max_constraint_addition: int = 10**10 #or 2000 priority 1
     max_row_generation_iterations: int = 100
     N: int = 2
     lam: float = 0.5
@@ -39,3 +38,4 @@ class OptimizationParameters:
     d_bar_F_organ_2: float = d_bar_organ_2/N * 1.1
     d_bar_organ_3: float = 60
     d_bar_F_organ_3: float = d_bar_organ_2/N * 1.1
+    eps: float = 1e-4 # eps is the tolerance for the fractional dose constraints
