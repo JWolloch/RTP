@@ -381,9 +381,11 @@ class Model:
         if self._debug:
             A_organ_1 = eye(self._debug_n)
             A_organ_2 = eye(self._debug_n)
+            A_organ_3 = eye(self._debug_n)
         else:
             A_organ_1 = eye(self._H_1)
             A_organ_2 = eye(self._H_2)
+            A_organ_3 = eye(self._H_3)
 
         #======== Organ 1 =========
         y_1 = self._dose_healthy_voxels_organ_1[0]

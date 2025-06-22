@@ -55,3 +55,5 @@ python311
 .bash_logout
 .bashrc
 .gitconfig
+src/test.py
+Miniconda3-latest-Linux-x86_64.sh

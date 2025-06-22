@@ -19,7 +19,7 @@ def load_liver_data_mat(filepath: str) -> tuple[csc_matrix, np.ndarray, csc_matr
     mat_data = loadmat(filepath, squeeze_me=True)  # squeeze to remove singleton dimensions
     
     def maybe_sparse(x):
-        return csc_matrix(x) if not issparse(x) else x
+        return csc_matrix(x) if not issparse(x) else x.tocsc()
 
     D = maybe_sparse(mat_data["Dij"])
     phi_hat = np.array(mat_data["omf_Vec"]).flatten()
