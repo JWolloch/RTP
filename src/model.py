@@ -35,10 +35,10 @@ class Model:
         # Create model using this environment
         self._model = gp.Model(env=self._env)
         self._folder_name = f"{self._optimization_parameters.solution_method.name}_{self._optimization_parameters.n_most_violated_constraints}"
-        os.makedirs(f"results/{self._folder_name}", exist_ok=True)
+        os.makedirs(f"results/mu_F_{self._optimization_parameters.mu_F}/{self._folder_name}", exist_ok=True)
 
         # Write Gurobi logs to file (but NOT to console)
-        self._model.setParam(GRB.Param.LogFile, f"results/{self._folder_name}/gurobi.log")
+        self._model.setParam(GRB.Param.LogFile, f"results/mu_F_{self._optimization_parameters.mu_F}/{self._folder_name}/gurobi.log")
         self._model.setParam(GRB.Param.DualReductions, 0)
         self._model.setParam(GRB.Param.Method, self._optimization_parameters.solution_method.value)
 
@@ -851,16 +851,16 @@ class Model:
         if self._model_status == GRB.OPTIMAL:
             logger.model("Row generation: Optimal solution found.")
             if self._debug:
-                self._model.write(f"results/{self._folder_name}/debug_rowgen_model.sol")
+                self._model.write(f"results/mu_F_{self._optimization_parameters.mu_F}/{self._folder_name}/debug_rowgen_model.sol")
             else:
-                self._model.write(f"results/{self._folder_name}/rowgen_model.sol")
+                self._model.write(f"results/mu_F_{self._optimization_parameters.mu_F}/{self._folder_name}/rowgen_model.sol")
         elif self._model_status == GRB.INFEASIBLE:
             logger.model("Row generation model is infeasible. Computing IIS...")
             self._model.computeIIS()
             if self._debug:
-                self._model.write(f"results/{self._folder_name}/debug_rowgen_model.ilp")
+                self._model.write(f"results/mu_F_{self._optimization_parameters.mu_F}/{self._folder_name}/debug_rowgen_model.ilp")
             else:
-                self._model.write(f"results/{self._folder_name}/rowgen_model.ilp")
+                self._model.write(f"results/mu_F_{self._optimization_parameters.mu_F}/{self._folder_name}/rowgen_model.ilp")
         else:
             logger.model(f"Solver ended with status code: {self._model_status}")
 

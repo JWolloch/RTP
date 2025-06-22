@@ -188,7 +188,7 @@ def save_run_results(
 ):
     # Folder name based on solution method and constraint count
     folder_name = f"{opt_params.solution_method.name}_{opt_params.n_most_violated_constraints}"
-    folder_path = os.path.join("results", folder_name)
+    folder_path = os.path.join("results", f"mu_F_{opt_params.mu_F}", folder_name)
     os.makedirs(folder_path, exist_ok=True)
 
     # Save parameters and solver time
@@ -206,6 +206,10 @@ def save_run_results(
     solution_dict = {k: v.tolist() if isinstance(v, np.ndarray) else v for k, v in solution_dict.items()}
     with open(os.path.join(folder_path, "solution.json"), "w") as f:
         json.dump(solution_dict, f, indent=4)
+
+def load_saved_solution(json_path: str) -> dict[str, Any]:
+    with open(json_path, "r") as f:
+        return json.load(f)
 
 class MemoryMonitor:
     def __init__(self, interval: float = 0.05):

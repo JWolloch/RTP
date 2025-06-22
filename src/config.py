@@ -25,13 +25,13 @@ class ProjectionParameters:
 class OptimizationParameters:
     debug: bool = False
     debug_n: int = 1000
-    solution_method: SolutionMethod = SolutionMethod.CONCURRENT # Run with [Primal-simplex, Primal-dual-simplex, Barrier]
+    solution_method: SolutionMethod = SolutionMethod.BARRIER # Run with [Primal-simplex, Primal-dual-simplex, Barrier]
     row_generation: bool = True
     n_most_violated_constraints: int = 1 # Run with [1, 2, 5, 10]
     max_row_generation_iterations: int = 100
     N: int = 2
     lam: float = 0.5
-    mu_F: float = 1.3
+    mu_F: float = 1.1
     d_bar_F: float = 0.95
     d_bar: float = 0.9 * d_bar_F * N
     d_bar_F_organ_1: float = 0.95
