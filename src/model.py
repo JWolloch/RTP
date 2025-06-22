@@ -677,8 +677,8 @@ class Model:
             logger.model("Constraint 3c1 fully evaluated.")
         
         constraints_to_add_1 = heapq.nlargest(self._optimization_parameters.n_most_violated_constraints, most_violated_constraints_1)
-        if len(constraints_to_add_1) > self._optimization_parameters.max_constraints_to_add:
-            constraints_to_add_1 = constraints_to_add_1[:self._optimization_parameters.max_constraints_to_add]
+        if len(constraints_to_add_1) > self._optimization_parameters.max_constraint_addition:
+            constraints_to_add_1 = constraints_to_add_1[:self._optimization_parameters.max_constraint_addition]
         
         y1 = self._dose_tumor_voxels[0][np.array([triplet[1] for triplet in constraints_to_add_1])]
         A1 = np.array([self._preprocessor.phi_bar_1[triplet[1]] for triplet in constraints_to_add_1])
@@ -693,8 +693,8 @@ class Model:
         self._model.addMConstr(A, y1, GRB.LESS_EQUAL, np.zeros(len(constraints_to_add_1)))
 
         constraints_to_add_2 = heapq.nlargest(self._optimization_parameters.n_most_violated_constraints, most_violated_constraints_2)
-        if len(constraints_to_add_2) > self._optimization_parameters.max_constraints_to_add:
-            constraints_to_add_2 = constraints_to_add_2[:self._optimization_parameters.max_constraints_to_add]
+        if len(constraints_to_add_2) > self._optimization_parameters.max_constraint_addition:
+            constraints_to_add_2 = constraints_to_add_2[:self._optimization_parameters.max_constraint_addition]
         
         y2 = self._dose_tumor_voxels[1][np.array([triplet[1] for triplet in constraints_to_add_2])]
         A2 = np.array([self._preprocessor.phi_bar_2[triplet[1]] for triplet in constraints_to_add_2])
@@ -854,8 +854,8 @@ class Model:
             logger.model("Constraint 3c2 fully evaluated.")
         
         constraints_to_add_1 = heapq.nlargest(self._optimization_parameters.n_most_violated_constraints, most_violated_constraints_1)
-        if len(constraints_to_add_1) > self._optimization_parameters.max_constraints_to_add:
-            constraints_to_add_1 = constraints_to_add_1[:self._optimization_parameters.max_constraints_to_add]
+        if len(constraints_to_add_1) > self._optimization_parameters.max_constraint_addition:
+            constraints_to_add_1 = constraints_to_add_1[:self._optimization_parameters.max_constraint_addition]
         
         y1 = self._dose_tumor_voxels[0][np.array([triplet[1] for triplet in constraints_to_add_1])]
         A1 = np.array([self._preprocessor.M_3c2_1[triplet[2], triplet[1]] for triplet in constraints_to_add_1])
@@ -871,8 +871,8 @@ class Model:
         self._model.addMConstr(A, y1, GRB.LESS_EQUAL, np.zeros(len(constraints_to_add_1)))
 
         constraints_to_add_2 = heapq.nlargest(self._optimization_parameters.n_most_violated_constraints, most_violated_constraints_2)
-        if len(constraints_to_add_2) > self._optimization_parameters.max_constraints_to_add:
-            constraints_to_add_2 = constraints_to_add_2[:self._optimization_parameters.max_constraints_to_add]
+        if len(constraints_to_add_2) > self._optimization_parameters.max_constraint_addition:
+            constraints_to_add_2 = constraints_to_add_2[:self._optimization_parameters.max_constraint_addition]
         
         y2 = self._dose_tumor_voxels[1][np.array([triplet[1] for triplet in constraints_to_add_2])]
         A2 = np.array([self._preprocessor.M_3c2_2[triplet[2], triplet[1]] for triplet in constraints_to_add_2])
