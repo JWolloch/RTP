@@ -26,7 +26,7 @@ class OptimizationParameters:
     debug_n: int = 2000
     solution_method: SolutionMethod = SolutionMethod.PRIMAL_DUAL_SIMPLEX # Run with [Primal-simplex, Primal-dual-simplex, Barrier] barrier if it takes too long
     row_generation: bool = True
-    n_most_violated_constraints: int = 10 # Run with [5, 10] priority 2
+    n_most_violated_constraints: int = 5 # Run with [5, 10] priority 2
     max_constraint_addition: int = 10**10 #or 2000 priority 1
     max_row_generation_iterations: int = 100
     N: int = 2
