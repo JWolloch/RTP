@@ -491,9 +491,9 @@ class Model:
             self._voxels_already_considered_c1[f"{constraint[1]}"] = (new_already_considered_voxels_1, old_already_considered_voxels_2)
         
         for constraint in most_violated_constraints_2:
-            old_already_considered_voxels_1, old_already_considered_voxels_2 = self._voxels_already_considered_c2[f"{constraint[1]}"]
+            old_already_considered_voxels_1, old_already_considered_voxels_2 = self._voxels_already_considered_c1[f"{constraint[1]}"]
             new_already_considered_voxels_2 = np.append(old_already_considered_voxels_2, constraint[2])
-            self._voxels_already_considered_c2[f"{constraint[1]}"] = (old_already_considered_voxels_1, new_already_considered_voxels_2)
+            self._voxels_already_considered_c1[f"{constraint[1]}"] = (old_already_considered_voxels_1, new_already_considered_voxels_2)
         
         number_of_constraints_added = len(most_violated_constraints_1) + len(most_violated_constraints_2)
 
@@ -516,8 +516,12 @@ class Model:
             v1_old, v2_old = self._voxels_already_considered_c2[f"{v}"]
             #======== Fraction 1 =========
             indices_to_consider_1 = np.setdiff1d(self._indices, v1_old) #avoiding re-evaluating already added constraints
+
+            if indices_to_consider_1.shape[0] == 0:
+                continue #skip if no indices to consider
+
             A1 = self._preprocessor.M_3c2_1[indices_to_consider_1, v]
-            A2 = -self._mu_F * diags(self._preprocessor.phi_bar_1[indices_to_consider_1])
+            A2 = -self._mu_F * diags(self._preprocessor.phi_underbar_1[indices_to_consider_1])
 
             blocks = [A1, A2]
             A = hstack(blocks, format="csc")
@@ -533,21 +537,26 @@ class Model:
             violated_lhs_1 = constraint_lhs_1[violated_indices_1]
 
             l_1 = min(self._optimization_parameters.n_most_violated_constraints, violated_lhs_1.shape[0])
+
+            if l_1 == 0:
+                continue #skip if no violated constraints
+
             top_l_indices_1 = np.argsort(violated_lhs_1)[-l_1:]
             most_violated_indices_1 = violated_indices_1[top_l_indices_1]
+            most_violated_values_1 = violated_lhs_1[top_l_indices_1]
 
-            v1_new = np.concatenate((v1_old, most_violated_indices_1))
-
-            r_1 = most_violated_indices_1.shape[0]
-
-            if r_1 > 0:
-                number_of_constraints_added += r_1
-                self._model.addMConstr(A[most_violated_indices_1], y_1, GRB.LESS_EQUAL, np.zeros(r_1), name=f"constraint_3c2_1_{v}")
+            constraints_to_add_1.extend(
+            [(float(violation), v, indices_to_consider_1[u_idx]) for violation, u_idx in zip(most_violated_values_1, most_violated_indices_1)]
+            )
 
             #======== Fraction 2 =========
             indices_to_consider_2 = np.setdiff1d(self._indices, v2_old) #avoiding re-evaluating already added constraints
+
+            if indices_to_consider_2.shape[0] == 0:
+                continue #skip if no indices to consider
+
             B1 = self._preprocessor.M_3c2_2[indices_to_consider_2, v]
-            B2 = -self._mu_F * diags(self._preprocessor.phi_bar_2[indices_to_consider_2])
+            B2 = -self._mu_F * diags(self._preprocessor.phi_underbar_2[indices_to_consider_2])
 
             blocks = [B1, B2]
             B = hstack(blocks, format="csc")
@@ -563,19 +572,60 @@ class Model:
             violated_lhs_2 = constraint_lhs_2[violated_indices_2]
 
             l_2 = min(self._optimization_parameters.n_most_violated_constraints, violated_lhs_2.shape[0])
+
+            if l_2 == 0:
+                continue #skip if no violated constraints
+
             top_l_indices_2 = np.argsort(violated_lhs_2)[-l_2:]
             most_violated_indices_2 = violated_indices_2[top_l_indices_2]
+            most_violated_values_2 = violated_lhs_2[top_l_indices_2]
 
-            v2_new = np.concatenate((v2_old, most_violated_indices_2))
+            constraints_to_add_2.extend(
+            [(float(violation), v, indices_to_consider_2[u_idx]) for violation, u_idx in zip(most_violated_values_2, most_violated_indices_2)]
+            )
 
-            r_2 = most_violated_indices_2.shape[0]
+        most_violated_constraints_1 = heapq.nlargest(self._optimization_parameters.max_constraint_addition, constraints_to_add_1, key=lambda x: x[0])
 
-            if r_2 > 0:
-                number_of_constraints_added += r_2
-                self._model.addMConstr(B[most_violated_indices_2], y_2, GRB.LESS_EQUAL, np.zeros(r_2), name=f"constraint_3c2_2_{v}")
+        v_voxel_indices_1 = np.array([constraint[1] for constraint in most_violated_constraints_1])
+        u_voxel_indices_1 = np.array([constraint[2] for constraint in most_violated_constraints_1])
+        
+        left_diagonal_matrix_1 = diags(self._preprocessor.M_3c2_1[u_voxel_indices_1, v_voxel_indices_1])
+        right_diagonal_matrix_1 = -self._mu_F * diags(self._preprocessor.phi_underbar_1[u_voxel_indices_1])
 
-            self._voxels_already_considered_c2[f"{v}"] = (v1_new, v2_new)
+        A_1 = hstack([left_diagonal_matrix_1, right_diagonal_matrix_1], format="csc")
 
+        indices_1 = np.concatenate((v_voxel_indices_1, u_voxel_indices_1))
+        z_1 = self._dose_tumor_voxels[0][indices_1]
+
+        self._model.addMConstr(A_1, z_1, GRB.LESS_EQUAL, np.zeros(self._optimization_parameters.max_constraint_addition), name="constraint_3c2_1")
+
+        
+        most_violated_constraints_2 = heapq.nlargest(self._optimization_parameters.max_constraint_addition, constraints_to_add_2, key=lambda x: x[0])
+
+        v_voxel_indices_2 = np.array([constraint[1] for constraint in most_violated_constraints_2])
+        u_voxel_indices_2 = np.array([constraint[2] for constraint in most_violated_constraints_2])
+        
+        left_diagonal_matrix_2 = diags(self._preprocessor.M_3c2_2[u_voxel_indices_2, v_voxel_indices_2])
+        right_diagonal_matrix_2 = -self._mu_F * diags(self._preprocessor.phi_underbar_2[u_voxel_indices_2])
+
+        A_2 = hstack([left_diagonal_matrix_2, right_diagonal_matrix_2], format="csc")
+
+        indices_2 = np.concatenate((v_voxel_indices_2, u_voxel_indices_2))
+        z_2 = self._dose_tumor_voxels[1][indices_2]
+
+        self._model.addMConstr(A_2, z_2, GRB.LESS_EQUAL, np.zeros(self._optimization_parameters.max_constraint_addition), name="constraint_3c2_2")
+
+        for constraint in most_violated_constraints_1:
+            old_already_considered_voxels_1, old_already_considered_voxels_2 = self._voxels_already_considered_c2[f"{constraint[1]}"]
+            new_already_considered_voxels_1 = np.append(old_already_considered_voxels_1, constraint[2])
+            self._voxels_already_considered_c2[f"{constraint[1]}"] = (new_already_considered_voxels_1, old_already_considered_voxels_2)
+
+        for constraint in most_violated_constraints_2:
+            old_already_considered_voxels_1, old_already_considered_voxels_2 = self._voxels_already_considered_c2[f"{constraint[1]}"]
+            new_already_considered_voxels_2 = np.append(old_already_considered_voxels_2, constraint[2])
+            self._voxels_already_considered_c2[f"{constraint[1]}"] = (old_already_considered_voxels_1, new_already_considered_voxels_2)
+        
+        number_of_constraints_added = len(most_violated_constraints_1) + len(most_violated_constraints_2)
         logger.model("Constraint 3c2 completed.")
 
         return number_of_constraints_added
