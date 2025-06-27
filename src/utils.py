@@ -14,7 +14,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def load_liver_data_mat(filepath: str) -> tuple[csc_matrix, np.ndarray, csc_matrix, np.ndarray, np.ndarray, np.ndarray]:
+def load_liver_data_mat(filepath: str, debug: bool=False, debug_n: int=1000) -> tuple[csc_matrix, np.ndarray, csc_matrix, np.ndarray, np.ndarray, np.ndarray]:
     logger.preprocess("Loading liver data from %s", filepath)
     mat_data = loadmat(filepath, squeeze_me=True)  # squeeze to remove singleton dimensions
     
@@ -49,7 +49,10 @@ def load_liver_data_mat(filepath: str) -> tuple[csc_matrix, np.ndarray, csc_matr
     logger.preprocess(f"phi_hat.shape: {phi_hat.shape}")
     logger.preprocess(f"voxel_positions.shape: {voxel_positions.shape}")
 
-    return D_hat, phi_hat, voxel_positions, tumor_voxels, H_1_voxels, H_2_voxels, H_3_voxels
+    if debug:
+        return D_hat[:debug_n], phi_hat[:debug_n], voxel_positions[:debug_n], tumor_voxels[:debug_n], H_1_voxels[:debug_n], H_2_voxels[:debug_n], H_3_voxels[:debug_n]
+    else:
+        return D_hat, phi_hat, voxel_positions, tumor_voxels, H_1_voxels, H_2_voxels, H_3_voxels
 
 def compute_voxel_distance_matrix(adj_matrix: csc_matrix) -> np.ndarray:
     """

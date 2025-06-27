@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 from enum import IntEnum
 import numpy as np
 
@@ -22,8 +23,6 @@ class ProjectionParameters:
 
 @dataclass
 class OptimizationParameters:
-    debug: bool = False
-    debug_n: int = 2000
     solution_method: SolutionMethod = SolutionMethod.PRIMAL_DUAL_SIMPLEX # Run with [Primal-simplex, Primal-dual-simplex, Barrier] barrier if it takes too long
     row_generation: bool = True
     n_most_violated_constraints: int = 5 # Run with [5, 10] priority 2
@@ -46,13 +45,20 @@ class OptimizationParameters:
         self.d_bar_F_organ_3 = self.d_bar_organ_3 / self.N * 1.1
 
     @classmethod
-    def from_dict(cls, params: Dict[str, Any]) -> "OptimizationParameters":
+    def from_dict(cls, params: dict[str, Any]) -> "OptimizationParameters":
         init_fields = {f.name for f in cls.__dataclass_fields__.values() if f.init}
         processed = {}
 
         for key, value in params.items():
             if key == "solution_method":
-                value = SolutionMethod(value) if not isinstance(value, SolutionMethod) else value
+                # Accept string like "PRIMAL_DUAL_SIMPLEX" or int like 1
+                if isinstance(value, str):
+                    try:
+                        value = SolutionMethod[value]  # convert string to enum
+                    except KeyError:
+                        raise ValueError(f"Invalid solution_method: {value}")
+                else:
+                    value = SolutionMethod(value)  # convert int to enum
             if key in init_fields:
                 processed[key] = value
 

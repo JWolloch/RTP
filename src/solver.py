@@ -11,7 +11,7 @@ if __name__ == "__main__":
     configure_logging()
     
     # Initialize preprocessor
-    preprocessor = Preprocessor("data/liverEx_2.mat")
+    preprocessor = Preprocessor("data/liverEx_2.mat", debug=True, debug_n=1000)
     preprocessor.check_phi_bounds()
     preprocessor.print_min_max_projections()
     preprocessor.print_sample_projections()
@@ -20,7 +20,7 @@ if __name__ == "__main__":
     optimization_params = OptimizationParameters()
     
     # Create and build the model
-    model = Model(preprocessor, optimization_params, debug=optimization_params.debug)
+    model = Model(preprocessor, optimization_params)
 
     # Start monitoring
     memory_monitor = MemoryMonitor(interval=0.1)
@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     # --- Start model solving section ---
     if optimization_params.row_generation:
-        if optimization_params.debug:
+        if preprocessor.debug:
             logger.solver("In debug mode")
             
         logger.solver("Solving model in row generation mode")
@@ -69,6 +69,12 @@ if __name__ == "__main__":
             gamma_params=GammaParameters(),
             proj_params=ProjectionParameters(),
             opt_params=optimization_params,
+            found_feasible_solution=found_feasible_solution,
+            objective_value_per_iteration=objective_value_per_iteration,
+            total_constraints_added=total_constraints_added,
+            objective_value_per_iteration=objective_value_per_iteration,
+            c1_constraints_added_per_iteration=c1_constraints_added_per_iteration,
+            c2_constraints_added_per_iteration=c2_constraints_added_per_iteration,
             solve_time_seconds=model._solver_time,
             peak_memory_mb=peak_memory_mb,
             solution_dict=solution

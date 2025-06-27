@@ -8,8 +8,10 @@ from scipy.sparse import csc_matrix
 logger = logging.getLogger(__name__)
 
 class Preprocessor:
-    def __init__(self, filepath: str):
-        self._D, self._phi_hat, self._voxel_positions, self._tumor_voxels, self._H_1_voxels, self._H_2_voxels, self._H_3_voxels = utils.load_liver_data_mat(filepath)
+    def __init__(self, filepath: str, debug: bool=False, debug_n: int=1000):
+        self._debug = debug
+        self._debug_n = debug_n
+        self._D, self._phi_hat, self._voxel_positions, self._tumor_voxels, self._H_1_voxels, self._H_2_voxels, self._H_3_voxels = utils.load_liver_data_mat(filepath, self._debug, self._debug_n)
         self._voxel_distance_matrix = utils.compute_voxel_distance_matrix(self._voxel_positions)
         self._gamma_matrix = utils.apply_gamma_to_matrix(self._voxel_distance_matrix, GammaParameters)
         self._phi_underbar_0 = utils.compute_phi_underbar_0(self._phi_hat, ProjectionParameters.delta)
@@ -63,6 +65,14 @@ class Preprocessor:
         ]
         print(tabulate(table, headers=["Projection", "Value"], tablefmt="grid"))
         print()
+    
+    @property
+    def debug(self) -> bool:
+        return self._debug
+    
+    @property
+    def debug_n(self) -> int:
+        return self._debug_n
     
     @property
     def D(self) -> csc_matrix:
