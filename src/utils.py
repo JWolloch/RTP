@@ -193,7 +193,7 @@ def save_run_results(
 ):
     # Folder name based on solution method and constraint count
     folder_name = f"{opt_params.solution_method.name}_{opt_params.n_most_violated_constraints}"
-    folder_path = os.path.join("final_results", f"mu_F_{opt_params.mu_F}", folder_name)
+    folder_path = os.path.join("final_results", f"mu_F_{opt_params.mu_F}_max_constraint_addition_{opt_params.max_constraint_addition}_n_most_violated_constraints_{opt_params.n_most_violated_constraints}", folder_name)
     os.makedirs(folder_path, exist_ok=True)
 
     # Save parameters and solver time
