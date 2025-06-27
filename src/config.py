@@ -28,7 +28,7 @@ class OptimizationParameters:
     row_generation: bool = True
     n_most_violated_constraints: int = 5 # Run with [5, 10] priority 2
     max_constraint_addition: int = 10**10 #or 2000 priority 1
-    max_row_generation_iterations: int = 100
+    max_row_generation_iterations: int = 1000
     N: int = 2
     lam: float = 0.5
     mu_F: float = 1.3 # 1.1, 1.15, 1.2,... priority 3
@@ -39,3 +39,21 @@ class OptimizationParameters:
     d_bar_organ_3: float = 60
     d_bar_F_organ_3: float = d_bar_organ_2/N * 1.1
     eps: float = 1e-4 # eps is the tolerance for the fractional dose constraints
+
+    def __post_init__(self):
+        self.d_bar_F_organ_1 = self.d_bar_organ_1 / self.N * 1.1
+        self.d_bar_F_organ_2 = self.d_bar_organ_2 / self.N * 1.1
+        self.d_bar_F_organ_3 = self.d_bar_organ_3 / self.N * 1.1
+
+    @classmethod
+    def from_dict(cls, params: Dict[str, Any]) -> "OptimizationParameters":
+        init_fields = {f.name for f in cls.__dataclass_fields__.values() if f.init}
+        processed = {}
+
+        for key, value in params.items():
+            if key == "solution_method":
+                value = SolutionMethod(value) if not isinstance(value, SolutionMethod) else value
+            if key in init_fields:
+                processed[key] = value
+
+        return cls(**processed)
