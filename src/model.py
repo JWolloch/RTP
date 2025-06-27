@@ -457,33 +457,39 @@ class Model:
         
         most_violated_constraints_1 = heapq.nlargest(self._optimization_parameters.max_constraint_addition, constraints_to_add_1, key=lambda x: x[0])
 
-        v_voxel_indices_1 = np.array([constraint[1] for constraint in most_violated_constraints_1])
-        u_voxel_indices_1 = np.array([constraint[2] for constraint in most_violated_constraints_1])
+        v_voxel_indices_1 = np.array([constraint[1] for constraint in most_violated_constraints_1], dtype=int) #casting to int to avoid type error for empty array
+        u_voxel_indices_1 = np.array([constraint[2] for constraint in most_violated_constraints_1], dtype=int)
+
+        if v_voxel_indices_1.shape[0] > 0:
         
-        left_diagonal_matrix_1 = diags(self._preprocessor.phi_bar_1[v_voxel_indices_1])
-        right_diagonal_matrix_1 = -self._mu_F * diags(self._preprocessor.M_3c1_1[u_voxel_indices_1, v_voxel_indices_1].toarray().flatten())
+            left_diagonal_matrix_1 = diags(self._preprocessor.phi_bar_1[v_voxel_indices_1])
+            vals = np.asarray(self._preprocessor.M_3c1_1[u_voxel_indices_1, v_voxel_indices_1]).flatten()
+            right_diagonal_matrix_1 = -self._mu_F * diags(vals)
 
-        A_1 = hstack([left_diagonal_matrix_1, right_diagonal_matrix_1], format="csc")
+            A_1 = hstack([left_diagonal_matrix_1, right_diagonal_matrix_1], format="csc")
 
-        indices_1 = np.concatenate((v_voxel_indices_1, u_voxel_indices_1))
-        z_1 = self._dose_tumor_voxels[0][indices_1]
+            indices_1 = np.concatenate((v_voxel_indices_1, u_voxel_indices_1))
+            z_1 = self._dose_tumor_voxels[0][indices_1]
 
-        self._model.addMConstr(A_1, z_1, GRB.LESS_EQUAL, np.zeros(self._optimization_parameters.max_constraint_addition), name="constraint_3c1_1")
+            self._model.addMConstr(A_1, z_1, GRB.LESS_EQUAL, np.zeros(A_1.shape[0]), name="constraint_3c1_1")
 
         most_violated_constraints_2 = heapq.nlargest(self._optimization_parameters.max_constraint_addition, constraints_to_add_2, key=lambda x: x[0])
 
-        v_voxel_indices_2 = np.array([constraint[1] for constraint in most_violated_constraints_2])
-        u_voxel_indices_2 = np.array([constraint[2] for constraint in most_violated_constraints_2])
-        
-        left_diagonal_matrix_2 = diags(self._preprocessor.phi_bar_2[v_voxel_indices_2])
-        right_diagonal_matrix_2 = -self._mu_F * diags(self._preprocessor.M_3c1_2[u_voxel_indices_2, v_voxel_indices_2].toarray().flatten())
-        
-        A_2 = hstack([left_diagonal_matrix_2, right_diagonal_matrix_2], format="csc")
-        
-        indices_2 = np.concatenate((v_voxel_indices_2, u_voxel_indices_2))
-        z_2 = self._dose_tumor_voxels[1][indices_2]
-        
-        self._model.addMConstr(A_2, z_2, GRB.LESS_EQUAL, np.zeros(self._optimization_parameters.max_constraint_addition), name="constraint_3c1_2")
+        v_voxel_indices_2 = np.array([constraint[1] for constraint in most_violated_constraints_2], dtype=int) #casting to int to avoid type error for empty array
+        u_voxel_indices_2 = np.array([constraint[2] for constraint in most_violated_constraints_2], dtype=int)
+
+        if v_voxel_indices_2.shape[0] > 0:
+
+            left_diagonal_matrix_2 = diags(self._preprocessor.phi_bar_2[v_voxel_indices_2])
+            vals = np.asarray(self._preprocessor.M_3c1_2[u_voxel_indices_2, v_voxel_indices_2]).flatten()
+            right_diagonal_matrix_2 = -self._mu_F * diags(vals)
+            
+            A_2 = hstack([left_diagonal_matrix_2, right_diagonal_matrix_2], format="csc")
+            
+            indices_2 = np.concatenate((v_voxel_indices_2, u_voxel_indices_2))
+            z_2 = self._dose_tumor_voxels[1][indices_2]
+            
+            self._model.addMConstr(A_2, z_2, GRB.LESS_EQUAL, np.zeros(A_2.shape[0]), name="constraint_3c1_2")
 
         for constraint in most_violated_constraints_1:
             old_already_considered_voxels_1, old_already_considered_voxels_2 = self._voxels_already_considered_c1[f"{constraint[1]}"]
@@ -586,34 +592,44 @@ class Model:
 
         most_violated_constraints_1 = heapq.nlargest(self._optimization_parameters.max_constraint_addition, constraints_to_add_1, key=lambda x: x[0])
 
-        v_voxel_indices_1 = np.array([constraint[1] for constraint in most_violated_constraints_1])
-        u_voxel_indices_1 = np.array([constraint[2] for constraint in most_violated_constraints_1])
+        v_voxel_indices_1 = np.array([constraint[1] for constraint in most_violated_constraints_1], dtype=int) #casting to int to avoid type error for empty array
+        u_voxel_indices_1 = np.array([constraint[2] for constraint in most_violated_constraints_1], dtype=int)
+
+        if v_voxel_indices_1.shape[0] > 0:
         
-        left_diagonal_matrix_1 = diags(self._preprocessor.M_3c2_1[u_voxel_indices_1, v_voxel_indices_1])
-        right_diagonal_matrix_1 = -self._mu_F * diags(self._preprocessor.phi_underbar_1[u_voxel_indices_1])
+            left_vals = np.asarray(self._preprocessor.M_3c2_1[u_voxel_indices_1, v_voxel_indices_1]).flatten()
+            left_diagonal_matrix_1 = diags(left_vals)
 
-        A_1 = hstack([left_diagonal_matrix_1, right_diagonal_matrix_1], format="csc")
+            right_vals = self._preprocessor.phi_underbar_1[u_voxel_indices_1]
+            right_diagonal_matrix_1 = -self._mu_F * diags(right_vals)
 
-        indices_1 = np.concatenate((v_voxel_indices_1, u_voxel_indices_1))
-        z_1 = self._dose_tumor_voxels[0][indices_1]
+            A_1 = hstack([left_diagonal_matrix_1, right_diagonal_matrix_1], format="csc")
 
-        self._model.addMConstr(A_1, z_1, GRB.LESS_EQUAL, np.zeros(self._optimization_parameters.max_constraint_addition), name="constraint_3c2_1")
+            indices_1 = np.concatenate((v_voxel_indices_1, u_voxel_indices_1))
+            z_1 = self._dose_tumor_voxels[0][indices_1]
+
+            self._model.addMConstr(A_1, z_1, GRB.LESS_EQUAL, np.zeros(A_1.shape[0]), name="constraint_3c2_1")
 
         
         most_violated_constraints_2 = heapq.nlargest(self._optimization_parameters.max_constraint_addition, constraints_to_add_2, key=lambda x: x[0])
 
-        v_voxel_indices_2 = np.array([constraint[1] for constraint in most_violated_constraints_2])
-        u_voxel_indices_2 = np.array([constraint[2] for constraint in most_violated_constraints_2])
-        
-        left_diagonal_matrix_2 = diags(self._preprocessor.M_3c2_2[u_voxel_indices_2, v_voxel_indices_2])
-        right_diagonal_matrix_2 = -self._mu_F * diags(self._preprocessor.phi_underbar_2[u_voxel_indices_2])
+        v_voxel_indices_2 = np.array([constraint[1] for constraint in most_violated_constraints_2], dtype=int) #casting to int to avoid type error for empty array
+        u_voxel_indices_2 = np.array([constraint[2] for constraint in most_violated_constraints_2], dtype=int)
 
-        A_2 = hstack([left_diagonal_matrix_2, right_diagonal_matrix_2], format="csc")
+        if v_voxel_indices_2.shape[0] > 0:
 
-        indices_2 = np.concatenate((v_voxel_indices_2, u_voxel_indices_2))
-        z_2 = self._dose_tumor_voxels[1][indices_2]
+            left_vals = np.asarray(self._preprocessor.M_3c2_2[u_voxel_indices_2, v_voxel_indices_2]).flatten()
+            left_diagonal_matrix_2 = diags(left_vals)
 
-        self._model.addMConstr(A_2, z_2, GRB.LESS_EQUAL, np.zeros(self._optimization_parameters.max_constraint_addition), name="constraint_3c2_2")
+            right_vals = self._preprocessor.phi_underbar_2[u_voxel_indices_2]
+            right_diagonal_matrix_2 = -self._mu_F * diags(right_vals)
+
+            A_2 = hstack([left_diagonal_matrix_2, right_diagonal_matrix_2], format="csc")
+
+            indices_2 = np.concatenate((v_voxel_indices_2, u_voxel_indices_2))
+            z_2 = self._dose_tumor_voxels[1][indices_2]
+
+            self._model.addMConstr(A_2, z_2, GRB.LESS_EQUAL, np.zeros(A_2.shape[0]), name="constraint_3c2_2")
 
         for constraint in most_violated_constraints_1:
             old_already_considered_voxels_1, old_already_considered_voxels_2 = self._voxels_already_considered_c2[f"{constraint[1]}"]

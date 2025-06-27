@@ -42,16 +42,21 @@ def load_liver_data_mat(filepath: str, debug: bool=False, debug_n: int=1000) -> 
 
     logger.preprocess("Liver data loaded successfully\n")
 
-    logger.preprocess(f"H_1_voxels.shape: {H_1_voxels.shape}")
-    logger.preprocess(f"H_2_voxels.shape: {H_2_voxels.shape}")
-    logger.preprocess(f"H_3_voxels.shape: {H_3_voxels.shape}")
-    logger.preprocess(f"D_hat.shape (Use only relevant entries from D): {D_hat.shape}")
-    logger.preprocess(f"phi_hat.shape: {phi_hat.shape}")
-    logger.preprocess(f"voxel_positions.shape: {voxel_positions.shape}")
-
     if debug:
-        return D_hat[:debug_n], phi_hat[:debug_n], voxel_positions[:debug_n], tumor_voxels[:debug_n], H_1_voxels[:debug_n], H_2_voxels[:debug_n], H_3_voxels[:debug_n]
+        logger.preprocess(f"H_1_voxels.shape: {H_1_voxels[:debug_n].shape}")
+        logger.preprocess(f"H_2_voxels.shape: {H_2_voxels[:debug_n].shape}")
+        logger.preprocess(f"H_3_voxels.shape: {H_3_voxels[:debug_n].shape}")
+        logger.preprocess(f"D_hat.shape (Use only relevant entries from D): {D_hat.shape}")
+        logger.preprocess(f"phi_hat.shape: {phi_hat[:debug_n].shape}")
+        logger.preprocess(f"voxel_positions.shape: {voxel_positions[:debug_n, :debug_n].shape}")
+        return D_hat, phi_hat[:debug_n], voxel_positions[:debug_n, :debug_n], tumor_voxels[:debug_n], H_1_voxels[:debug_n], H_2_voxels[:debug_n], H_3_voxels[:debug_n]
     else:
+        logger.preprocess(f"H_1_voxels.shape: {H_1_voxels.shape}")
+        logger.preprocess(f"H_2_voxels.shape: {H_2_voxels.shape}")
+        logger.preprocess(f"H_3_voxels.shape: {H_3_voxels.shape}")
+        logger.preprocess(f"D_hat.shape (Use only relevant entries from D): {D_hat.shape}")
+        logger.preprocess(f"phi_hat.shape: {phi_hat.shape}")
+        logger.preprocess(f"voxel_positions.shape: {voxel_positions.shape}")
         return D_hat, phi_hat, voxel_positions, tumor_voxels, H_1_voxels, H_2_voxels, H_3_voxels
 
 def compute_voxel_distance_matrix(adj_matrix: csc_matrix) -> np.ndarray:
@@ -187,6 +192,11 @@ def save_run_results(
     gamma_params: GammaParameters,
     proj_params: ProjectionParameters,
     opt_params: OptimizationParameters,
+    found_feasible_solution: bool,
+    objective_value_per_iteration: list[float],
+    total_constraints_added: int,
+    c1_constraints_added_per_iteration: list[int],
+    c2_constraints_added_per_iteration: list[int],
     solve_time_seconds: float,
     peak_memory_mb: float,
     solution_dict: dict[str, Any],
@@ -201,6 +211,11 @@ def save_run_results(
         "gamma_parameters": asdict(gamma_params),
         "projection_parameters": asdict(proj_params),
         "optimization_parameters": asdict(opt_params),
+        "found_feasible_solution": found_feasible_solution,
+        "objective_value_per_iteration": objective_value_per_iteration,
+        "total_constraints_added": total_constraints_added,
+        "c1_constraints_added_per_iteration": c1_constraints_added_per_iteration,
+        "c2_constraints_added_per_iteration": c2_constraints_added_per_iteration,
         "solve_time_seconds": round(solve_time_seconds, 3),
         "peak_memory_mb": round(peak_memory_mb, 3)
     }

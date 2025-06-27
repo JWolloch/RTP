@@ -85,9 +85,13 @@ if __name__ == "__main__":
     preprocessor.print_min_max_projections()
     preprocessor.print_sample_projections()
 
-    mu_F_vals = [1.2, 1.25, 1.3, 1.35, 1.4]
-    max_constraint_addition_vals = [10**3, 10**4, 10**5, 10**10]
-    n_most_violated_constraints_vals = [2, 5, 10]
+    # mu_F_vals = [1.2, 1.25, 1.3, 1.35, 1.4]
+    # max_constraint_addition_vals = [10**3, 10**4, 10**5, 10**10]
+    # n_most_violated_constraints_vals = [2, 5, 10]
+
+    mu_F_vals = [1.3]
+    max_constraint_addition_vals = [10**3, 10**10]
+    n_most_violated_constraints_vals = [10]
 
     param_combinations = list(product(mu_F_vals, max_constraint_addition_vals, n_most_violated_constraints_vals))
     total_runs = len(param_combinations)
@@ -104,4 +108,4 @@ if __name__ == "__main__":
             run_solver(param_dict, preprocessor)
         except Exception as e:
             logger.solver(f"Run failed for {param_dict}: {e}")
-            continue
+            raise e
