@@ -1,0 +1,70 @@
+{
+    "gamma_parameters": {
+        "max_dist": 10.0,
+        "gamma_constant": 0.15,
+        "alpha_0": 0.0292761,
+        "alpha_1": -0.0013514,
+        "alpha_2": 0.0128265
+    },
+    "projection_parameters": {
+        "delta": 0.05,
+        "sigma": 0.05
+    },
+    "optimization_parameters": {
+        "solution_method": 2,
+        "row_generation": true,
+        "n_most_violated_constraints": 10,
+        "max_constraint_addition": 10000000000,
+        "max_row_generation_iterations": 1000,
+        "N": 2,
+        "lam": 0.5,
+        "mu_F": 1.4,
+        "d_bar_organ_1": 60,
+        "d_bar_F_organ_1": 33.0,
+        "d_bar_organ_2": 50,
+        "d_bar_F_organ_2": 27.500000000000004,
+        "d_bar_organ_3": 60,
+        "d_bar_F_organ_3": 33.0,
+        "eps": 0.0001
+    },
+    "found_feasible_solution": true,
+    "objective_value_per_iteration": [
+        43.6910878730092,
+        37.26093644870838,
+        37.226129806116106,
+        37.2063360787183,
+        37.175913024779746,
+        37.12001851002285,
+        37.115373087537755,
+        37.10403212293605,
+        37.10339078017533,
+        37.1033907804711
+    ],
+    "total_constraints_added": 66199,
+    "c1_constraints_added_per_iteration": [
+        17180,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ],
+    "c2_constraints_added_per_iteration": [
+        18480,
+        9402,
+        7579,
+        5602,
+        3999,
+        2132,
+        1096,
+        650,
+        79,
+        0
+    ],
+    "solve_time_seconds": 299.496,
+    "peak_memory_mb": 11816.379
+}
