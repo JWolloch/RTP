@@ -666,6 +666,9 @@ class Model:
         while iteration < max_iterations:
             self._model.update()
             logger.model(f"--- Row Generation Iteration {iteration + 1} ---")
+            logger.model(f"mu_F: {self._optimization_parameters.mu_F}")
+            logger.model(f"max_constraint_addition: {self._optimization_parameters.max_constraint_addition}")
+            logger.model(f"n_most_violated_constraints: {self._optimization_parameters.n_most_violated_constraints}")
             if iteration == 0:
                 logger.model("Initial solve - no homogeneity constraints added.")
             logger.model(f"Invoking Gurobi solver - solution method: {self._optimization_parameters.solution_method.name}...")
@@ -718,11 +721,11 @@ class Model:
 
         if self._model_status == GRB.OPTIMAL:
             logger.model("Row generation: Optimal solution found.")
-            self._model.write(f"final_results/mu_F_{self._optimization_parameters.mu_F}/{self._folder_name}/rowgen_model.sol")
+            self._model.write(f"final_solutions/mu_F_{self._optimization_parameters.mu_F}_max_constraint_addition_{self._optimization_parameters.max_constraint_addition}_n_most_violated_constraints_{self._optimization_parameters.n_most_violated_constraints}/rowgen_model.sol")
         elif self._model_status == GRB.INFEASIBLE:
             logger.model("Row generation model is infeasible. Computing IIS...")
             self._model.computeIIS()
-            self._model.write(f"final_results/mu_F_{self._optimization_parameters.mu_F}/{self._folder_name}/rowgen_model.ilp")
+            self._model.write(f"final_solutions/mu_F_{self._optimization_parameters.mu_F}_max_constraint_addition_{self._optimization_parameters.max_constraint_addition}_n_most_violated_constraints_{self._optimization_parameters.n_most_violated_constraints}/rowgen_model.ilp")
         else:
             logger.model(f"Solver ended with status code: {self._model_status}")
 
