@@ -719,13 +719,16 @@ class Model:
         self._model.optimize()
         self._model_status = self._model.Status
 
+        output_dir = f"final_solutions/mu_F_{self._optimization_parameters.mu_F}_max_constraint_addition_{self._optimization_parameters.max_constraint_addition}_n_most_violated_constraints_{self._optimization_parameters.n_most_violated_constraints}"
+        os.makedirs(output_dir, exist_ok=True)  
+
         if self._model_status == GRB.OPTIMAL:
             logger.model("Row generation: Optimal solution found.")
-            self._model.write(f"final_solutions/mu_F_{self._optimization_parameters.mu_F}_max_constraint_addition_{self._optimization_parameters.max_constraint_addition}_n_most_violated_constraints_{self._optimization_parameters.n_most_violated_constraints}/rowgen_model.sol")
+            self._model.write(f"{output_dir}/rowgen_model.sol")
         elif self._model_status == GRB.INFEASIBLE:
             logger.model("Row generation model is infeasible. Computing IIS...")
             self._model.computeIIS()
-            self._model.write(f"final_solutions/mu_F_{self._optimization_parameters.mu_F}_max_constraint_addition_{self._optimization_parameters.max_constraint_addition}_n_most_violated_constraints_{self._optimization_parameters.n_most_violated_constraints}/rowgen_model.ilp")
+            self._model.write(f"{output_dir}/rowgen_model.ilp")
         else:
             logger.model(f"Solver ended with status code: {self._model_status}")
 

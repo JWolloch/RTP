@@ -87,7 +87,7 @@ if __name__ == "__main__":
     preprocessor.print_sample_projections()
 
     mu_F_vals = [1.3, 1.325, 1.35]
-    max_constraint_addition_vals = [1e4, 5e4, 1e10]
+    max_constraint_addition_vals = [int(1e4), int(5e4), int(1e10)]
     n_most_violated_constraints_vals = [2, 5, 10]
     solution_methods = [SolutionMethod.PRIMAL_DUAL_SIMPLEX]
 
