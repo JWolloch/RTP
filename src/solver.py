@@ -87,8 +87,8 @@ if __name__ == "__main__":
     preprocessor.print_sample_projections()
 
     mu_F_vals = [1.3, 1.325, 1.35]
-    max_constraint_addition_vals = [int(1e4), int(5e4), int(1e10)]
-    n_most_violated_constraints_vals = [2, 5, 10]
+    max_constraint_addition_vals = [int(1e10),int(5e4), int(1e4)]
+    n_most_violated_constraints_vals = [100, 20, 10]
     solution_methods = [SolutionMethod.PRIMAL_DUAL_SIMPLEX]
 
     param_combinations = list(product(mu_F_vals, max_constraint_addition_vals, n_most_violated_constraints_vals, solution_methods))
