@@ -79,30 +79,24 @@ def run_solver(param_dict: dict[str, Any], preprocessor: Preprocessor):
 
 if __name__ == "__main__":
     configure_logging()
-    
     # Initialize preprocessor
-    preprocessor = Preprocessor("data/liverEx_2.mat", debug=False, debug_n=1000)
+    preprocessor = Preprocessor("data/liverEx_2.mat", debug=True, debug_n=500)
     preprocessor.check_phi_bounds()
     preprocessor.print_min_max_projections()
     preprocessor.print_sample_projections()
 
-    mu_F_vals = [1.3, 1.325, 1.35]
-    max_constraint_addition_vals = [int(1e10),int(5e4), int(1e4)]
+    mu_F_vals = [1.3, 1.325, 1.35, 1.375, 1.4]
     n_most_violated_constraints_vals = [100, 20, 10]
     solution_methods = [SolutionMethod.PRIMAL_DUAL_SIMPLEX]
 
-    param_combinations = list(product(mu_F_vals, max_constraint_addition_vals, n_most_violated_constraints_vals, solution_methods))
-    #remove the combination 1.4, 10**10, 10 (already ran this guy)
-    #TODO: Remove the line below after the run is completed
-    param_combinations = [param for param in param_combinations if not (param[0] == 1.4 and param[1] == 10**10 and param[2] == 10)]
+    param_combinations = list(product(mu_F_vals, n_most_violated_constraints_vals, solution_methods))
     total_runs = len(param_combinations)
 
-    for i, (mu_F, max_constraint_addition, n_most_violated_constraints, solution_method) in enumerate(param_combinations, 1):
-        logger.solver(f"\n>>> Starting run {i}/{total_runs} with mu_F={mu_F}, max_add={max_constraint_addition}, top_violated={n_most_violated_constraints}, solution_method={solution_method}")
+    for i, (mu_F, n_most_violated_constraints, solution_method) in enumerate(param_combinations, 1):
+        logger.solver(f"\n>>> Starting run {i}/{total_runs} with mu_F={mu_F}, top_violated={n_most_violated_constraints}, solution_method={solution_method}")
         
         param_dict = {
             "mu_F": mu_F,
-            "max_constraint_addition": max_constraint_addition,
             "n_most_violated_constraints": n_most_violated_constraints,
             "solution_method": solution_method
         }
