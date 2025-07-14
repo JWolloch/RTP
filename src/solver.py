@@ -80,7 +80,7 @@ def run_solver(param_dict: dict[str, Any], preprocessor: Preprocessor):
 if __name__ == "__main__":
     configure_logging()
     # Initialize preprocessor
-    preprocessor = Preprocessor("data/liverEx_2.mat", debug=True, debug_n=500)
+    preprocessor = Preprocessor("data/liverEx_2.mat", debug=False, debug_n=1000) # debug_n does not matter when debug is False, specified for clarity
     preprocessor.check_phi_bounds()
     preprocessor.print_min_max_projections()
     preprocessor.print_sample_projections()
