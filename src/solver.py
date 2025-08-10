@@ -85,7 +85,7 @@ if __name__ == "__main__":
     preprocessor.print_min_max_projections()
     preprocessor.print_sample_projections()
 
-    mu_F_vals = [1.3, 1.325, 1.35, 1.375, 1.4]
+    mu_F_vals = [1.5, 1.6, 1.7]
     n_most_violated_constraints_vals = [100, 20, 10]
     solution_methods = [SolutionMethod.PRIMAL_DUAL_SIMPLEX]
 

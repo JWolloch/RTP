@@ -1,0 +1,54 @@
+{
+    "gamma_parameters": {
+        "max_dist": 10.0,
+        "gamma_constant": 0.15,
+        "alpha_0": 0.0292761,
+        "alpha_1": -0.0013514,
+        "alpha_2": 0.0128265
+    },
+    "projection_parameters": {
+        "delta": 0.05,
+        "sigma": 0.05
+    },
+    "optimization_parameters": {
+        "solution_method": 1,
+        "row_generation": true,
+        "n_most_violated_constraints": 100,
+        "max_row_generation_iterations": 1000,
+        "N": 2,
+        "lam": 0.5,
+        "mu_F": 1.5,
+        "d_bar_organ_1": 60,
+        "d_bar_F_organ_1": 33.0,
+        "d_bar_organ_2": 50,
+        "d_bar_F_organ_2": 27.500000000000004,
+        "d_bar_organ_3": 60,
+        "d_bar_F_organ_3": 33.0,
+        "eps": 0.0001
+    },
+    "found_feasible_solution": true,
+    "objective_value_per_iteration": [
+        28.974441115696045,
+        28.97444111569709,
+        28.97444111570121,
+        28.974441115698333,
+        28.974441115693136
+    ],
+    "total_constraints_added": 386355,
+    "c1_constraints_added_per_iteration": [
+        211182,
+        6947,
+        256,
+        9,
+        0
+    ],
+    "c2_constraints_added_per_iteration": [
+        157397,
+        10537,
+        27,
+        0,
+        0
+    ],
+    "solve_time_seconds": 5203.733,
+    "peak_memory_mb": 8450.266
+}
